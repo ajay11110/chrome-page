@@ -3,21 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chrome New Tab - Developer Rahul</title>
+    <title>Chrome New Tab - Developer Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Pacifico&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Pacifico&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         :root {
             --body-bg: #0f0f13;
             --font-color: #ffffff;
+            --glass-blur: 12px;
+            --glass-opacity: 0.08;
             --glass-bg: rgba(255,255,255,0.08);
             --glass-bg-hover: rgba(255,255,255,0.14);
             --glass-border: rgba(255,255,255,0.1);
             --accent-blue: #00d8ff;
-            --transition-speed: 0.4s;
+            --transition-speed: 0.35s;
             --clock-hour-color: #ffffff;
             --clock-minute-color: #00d8ff;
             --clock-second-color: #ff6b6b;
@@ -25,27 +27,50 @@
             --clock-date-color: rgba(255,255,255,0.6);
             --clock-day-color: rgba(255,255,255,0.35);
             --clock-ampm-color: #00d8ff;
-            --atom-size: 180px;
+            --atom-size: 170px;
             --atom-color-hex: #00d8ff;
             --atom-color-rgb: 0,216,255;
             --nucleus-size: calc(var(--atom-size) / 5);
-            --electron-color-hex: #99f8ff;
+            --nucleus-color: #00ff88;
+            --electron-color: #ff4757;
+            --electron-color-hex: var(--electron-color);
             --electron-size: calc(var(--atom-size) / 25);
             --electron-orbit-size: calc(var(--atom-size) / 2.5);
             --electron-speed: 1.2s;
             --electron-speed-alpha: 1s;
             --electron-speed-omega: .8s;
+            --bg-dim: 0.4;
+            --bg-blur: 0px;
+            --shortcut-size: 58px;
+            --shortcut-gap: 1.1rem;
         }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             background-color: var(--body-bg); color: var(--font-color);
             font-family: 'Outfit', sans-serif; min-height: 100vh;
             overflow-x: hidden; display: flex; justify-content: center;
-            align-items: flex-start; padding: 2rem 1rem;
+            align-items: flex-start; padding: 2rem 1rem 4rem;
+            position: relative;
         }
+
+        /* BACKGROUNDS */
+        .custom-bg {
+            position: fixed; top: -10px; left: -10px; width: calc(100% + 20px); height: calc(100% + 20px);
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            z-index: -2; opacity: 0; transition: opacity 0.5s ease, filter 0.2s ease;
+            filter: blur(var(--bg-blur, 0px)); pointer-events: none;
+        }
+        .custom-bg.has-image { opacity: 1; }
+        .bg-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, var(--bg-dim, 0.4));
+            z-index: -1; pointer-events: none; opacity: 0; transition: opacity 0.4s ease, background 0.2s ease;
+        }
+        .bg-overlay.active { opacity: 1; }
         .bg-gradient {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 20% 30%, #1a1a2e 0%, #0f0f13 100%); z-index: -1;
+            background: radial-gradient(circle at 20% 30%, #1a1a2e 0%, #0f0f13 100%); z-index: -3;
         }
         .bg-gradient::after {
             content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
@@ -57,8 +82,511 @@
         ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
 
+        /* MAIN CONTAINER */
+        #main-wrapper { width: 100%; max-width: 960px; transition: all 0.4s ease; }
+        #content { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; }
+
+        /* LAYOUT BLOCKS & DRAGGING */
+        .layout-block {
+            position: relative; transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        body.layout-editing .layout-block {
+            border: 2px dashed rgba(0,216,255,0.45);
+            border-radius: 14px;
+            padding: 10px;
+            background: rgba(0,216,255,0.03);
+            cursor: grab;
+            user-select: none;
+        }
+        body.layout-editing .layout-block:hover {
+            border-color: var(--accent-blue);
+            background: rgba(0,216,255,0.08);
+            box-shadow: 0 0 20px rgba(0,216,255,0.2);
+        }
+        body.layout-editing .layout-block.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        .block-drag-handle {
+            display: none; position: absolute; top: -14px; left: 14px;
+            background: var(--accent-blue); color: #000; font-size: 0.72rem;
+            font-weight: 700; padding: 2px 8px; border-radius: 6px;
+            text-transform: uppercase; letter-spacing: 1px; z-index: 50;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+        body.layout-editing .block-drag-handle { display: block; }
+        /* 8-DIRECTION BLOCK RESIZE HANDLES */
+        .block-resize-handle {
+            display: none;
+            position: absolute;
+            z-index: 60;
+            touch-action: none;
+            user-select: none;
+        }
+        body.layout-editing .block-resize-handle {
+            display: block;
+        }
+
+        /* Edges */
+        .resize-handle-n { top: -6px; left: 12px; right: 12px; height: 10px; cursor: ns-resize; }
+        .resize-handle-s { bottom: -6px; left: 12px; right: 12px; height: 10px; cursor: ns-resize; }
+        .resize-handle-w { top: 12px; bottom: 12px; left: -6px; width: 10px; cursor: ew-resize; }
+        .resize-handle-e { top: 12px; bottom: 12px; right: -6px; width: 10px; cursor: ew-resize; }
+
+        /* Corners */
+        .resize-handle-nw { top: -6px; left: -6px; width: 14px; height: 14px; cursor: nwse-resize; }
+        .resize-handle-ne { top: -6px; right: -6px; width: 14px; height: 14px; cursor: nesw-resize; }
+        .resize-handle-sw { bottom: -6px; left: -6px; width: 14px; height: 14px; cursor: nesw-resize; }
+        .resize-handle-se { bottom: -6px; right: -6px; width: 14px; height: 14px; cursor: nwse-resize; }
+
+        /* Visual pill & dot indicators for all 8 sides/corners */
+        body.layout-editing .block-resize-handle::after {
+            content: '';
+            position: absolute;
+            background: var(--accent-blue);
+            border-radius: 4px;
+            box-shadow: 0 0 8px rgba(0, 216, 255, 0.7);
+            transition: transform 0.15s, background 0.15s;
+        }
+        body.layout-editing .block-resize-handle:hover::after {
+            background: #ffffff;
+            transform: scale(1.3);
+        }
+        body.layout-editing .resize-handle-n::after { top: 3px; left: 50%; transform: translateX(-50%); width: 28px; height: 4px; }
+        body.layout-editing .resize-handle-s::after { bottom: 3px; left: 50%; transform: translateX(-50%); width: 28px; height: 4px; }
+        body.layout-editing .resize-handle-w::after { left: 3px; top: 50%; transform: translateY(-50%); width: 4px; height: 28px; }
+        body.layout-editing .resize-handle-e::after { right: 3px; top: 50%; transform: translateY(-50%); width: 4px; height: 28px; }
+        body.layout-editing .resize-handle-nw::after { top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; }
+        body.layout-editing .resize-handle-ne::after { top: 2px; right: 2px; width: 9px; height: 9px; border-radius: 50%; }
+        body.layout-editing .resize-handle-sw::after { bottom: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; }
+        body.layout-editing .resize-handle-se::after { bottom: 2px; right: 2px; width: 9px; height: 9px; border-radius: 50%; }
+
+        /* FOCUS LAYOUT & STOPWATCH / TIMER STYLES */
+        body.layout-focus-active,
+        html:has(body.layout-focus-active) {
+            background: #000000 !important;
+            background-color: #000000 !important;
+        }
+        body.layout-focus-active .custom-bg,
+        body.layout-focus-active .bg-overlay,
+        body.layout-focus-active .bg-gradient {
+            display: none !important;
+            opacity: 0 !important;
+        }
+
+        .focus-quick-trigger {
+            position: fixed; top: 1.5rem; right: 5.2rem; height: 44px; padding: 0 16px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+            border-radius: 12px; display: flex; align-items: center; gap: 8px;
+            cursor: pointer; transition: all 0.35s; z-index: 100;
+            color: rgba(255,255,255,0.85); font-size: 0.88rem; font-weight: 600;
+        }
+        .focus-quick-trigger:hover {
+            border-color: var(--accent-blue); color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(0, 216, 255, 0.3); transform: translateY(-2px);
+        }
+
+        .focus-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 1rem 1rem 3rem;
+            gap: 2rem;
+            color: #ffffff;
+        }
+        .layout-focus .focus-container {
+            display: flex;
+        }
+        .layout-focus #content {
+            display: none !important;
+        }
+
+        .focus-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .focus-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .focus-exit-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .focus-exit-btn:hover {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        /* FOCUS TIME */
+        .focus-time-wrapper { text-align: center; }
+        .focus-clock-display {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 4.8rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 4px;
+            text-shadow: 0 0 30px rgba(0, 216, 255, 0.35);
+            line-height: 1;
+        }
+        .focus-date-display {
+            margin-top: 0.6rem;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        /* FOCUS TOOLS: STOPWATCH & TIMER */
+        .focus-tool-card {
+            width: 100%;
+            background: rgba(12, 12, 18, 0.95);
+            border: 1px solid rgba(0, 216, 255, 0.25);
+            border-radius: 24px;
+            padding: 2rem 1.8rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            box-shadow: 0 0 50px rgba(0, 216, 255, 0.08), inset 0 0 30px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+        .focus-tool-tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 5px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .focus-tool-tab {
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.6);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .focus-tool-tab:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .focus-tool-tab.active {
+            background: var(--accent-blue);
+            color: #000000;
+            box-shadow: 0 0 15px rgba(0, 216, 255, 0.4);
+        }
+        .focus-tool-pane {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .stopwatch-display, .timer-display {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 5.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 4px;
+            text-shadow: 0 0 40px rgba(0, 216, 255, 0.5);
+            line-height: 1;
+        }
+        .stopwatch-ms {
+            font-size: 3rem;
+            color: var(--accent-blue);
+            opacity: 0.9;
+        }
+        .stopwatch-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+        }
+        .timer-presets {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+        .timer-preset-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.85);
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .timer-preset-btn:hover {
+            background: rgba(0, 216, 255, 0.15);
+            border-color: var(--accent-blue);
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+        .timer-inputs {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .timer-input-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 4px 10px;
+        }
+        .timer-input-group input {
+            width: 52px;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.6rem;
+            text-align: center;
+            outline: none;
+        }
+        .timer-input-group input::-webkit-inner-spin-button,
+        .timer-input-group input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .timer-input-group span {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 600;
+        }
+        .stopwatch-btn {
+            padding: 12px 28px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .stopwatch-btn.btn-start {
+            background: var(--accent-blue);
+            color: #000000;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(0, 216, 255, 0.4);
+        }
+        .stopwatch-btn.btn-start:hover {
+            filter: brightness(1.15);
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(0, 216, 255, 0.6);
+        }
+        .stopwatch-btn.btn-start.running {
+            background: #ff6b6b;
+            border-color: #ff6b6b;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
+        }
+        .stopwatch-btn.btn-lap:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: #00ff88;
+            color: #00ff88;
+            transform: translateY(-2px);
+        }
+        .stopwatch-btn.btn-reset:hover {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        .stopwatch-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .stopwatch-laps {
+            width: 100%;
+            max-height: 140px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 4px;
+        }
+        .sw-lap-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        /* FOCUS SHORTCUTS */
+        .focus-shortcuts-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .focus-shortcuts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+        }
+        .focus-shortcuts-edit-btn {
+            background: transparent;
+            border: 1px dashed rgba(255, 255, 255, 0.25);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.78rem;
+            padding: 4px 10px;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .focus-shortcuts-edit-btn:hover {
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+            background: rgba(0, 216, 255, 0.08);
+        }
+
+        .focus-shortcuts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.2rem;
+            width: 100%;
+        }
+        .focus-shortcut-card {
+            background: rgba(20, 20, 30, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 1.2rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .focus-shortcut-card:hover {
+            border-color: var(--accent-blue);
+            background: rgba(0, 216, 255, 0.06);
+            box-shadow: 0 8px 24px rgba(0, 216, 255, 0.15);
+            transform: translateY(-3px);
+        }
+        .focus-shortcut-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-decoration: none;
+            color: #ffffff;
+            flex: 1;
+        }
+        .focus-shortcut-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: var(--accent-blue);
+            flex-shrink: 0;
+        }
+        .focus-shortcut-icon img {
+            width: 26px;
+            height: 26px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+        .focus-shortcut-name {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        .focus-shortcut-single-edit {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.35);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 6px;
+            transition: color 0.2s;
+        }
+        .focus-shortcut-single-edit:hover {
+            color: var(--accent-blue);
+        }
+
+        /* LAYOUT EDITOR FLOATING BAR */
+        .layout-editor-bar {
+            position: fixed; top: 1.5rem; left: 50%; transform: translateX(-50%) translateY(-100px);
+            background: rgba(18, 18, 28, 0.95); border: 1px solid var(--accent-blue);
+            padding: 8px 18px; border-radius: 30px; z-index: 1000;
+            display: flex; align-items: center; gap: 1rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 20px rgba(0,216,255,0.3);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-size: 0.88rem;
+        }
+        .layout-editor-bar.active { transform: translateX(-50%) translateY(0); }
+        .layout-editor-btn {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            color: #fff; padding: 5px 12px; border-radius: 20px; font-family: inherit;
+            font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px;
+            transition: all 0.2s;
+        }
+        .layout-editor-btn:hover { background: var(--glass-bg-hover); border-color: var(--accent-blue); }
+        .layout-editor-btn.save { background: var(--accent-blue); color: #000; font-weight: 700; border-color: var(--accent-blue); }
+        .layout-editor-btn.save:hover { filter: brightness(1.1); }
+
         /* CLOCK */
-        .clock-section { text-align: center; margin-bottom: 1rem; }
+        .clock-section { text-align: center; margin-bottom: 0.5rem; }
         .clock-display {
             display: inline-flex; align-items: baseline; gap: 0;
             font-family: 'Share Tech Mono', monospace; font-size: 4.5rem;
@@ -83,23 +611,21 @@
         .date-sep  { color: rgba(255,255,255,0.2); }
         .date-date { color: var(--clock-date-color); font-weight: 400; transition: color 0.3s; }
 
-        /* NAV */
-        .nav-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem; }
+        /* NAV LINKS - hidden */
+        #block-nav { display: none !important; }
         .nav-links a {
-            font-size: 0.9rem; color: rgba(255,255,255,0.5);
+            font-size: 0.9rem; color: rgba(255,255,255,0.6);
             transition: all var(--transition-speed);
             display: flex; align-items: center; gap: 0.5rem; text-decoration: none;
+            padding: 4px 10px; border-radius: 8px;
         }
-        .nav-links a:hover { color: var(--accent-blue); transform: translateY(-2px); }
+        .nav-links a:hover { color: var(--accent-blue); background: var(--glass-bg); transform: translateY(-2px); }
 
-        #main-wrapper { width: 100%; max-width: 960px; }
-        #content { display: flex; flex-direction: column; gap: 1.5rem; }
-
-        /* HERO */
-        .hero-header { display: flex; justify-content: space-between; align-items: center; }
+        /* HERO: ATOM + QUOTE & PROFILE + SOCIAL */
+        .hero-header { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; }
         .atom-block { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; }
 
-        /* ATOM */
+        /* ATOM ANIMATION */
         .atom-wrapper { position: relative; display: block; }
         .atom { position: relative; width: var(--atom-size); height: var(--atom-size); animation: 8s atom-spin infinite cubic-bezier(1,.25,0,.75); }
         @keyframes atom-spin {
@@ -113,9 +639,10 @@
             content: ''; display: block; position: absolute; top: 50%; left: 50%;
             width: var(--nucleus-size); height: var(--nucleus-size);
             margin-top: calc(var(--nucleus-size) / -2); margin-left: calc(var(--nucleus-size) / -2);
-            background: var(--electron-color-hex); border-radius: 100%;
-            box-shadow: 0 0 3px 0 var(--atom-color-hex);
+            background: var(--nucleus-color, #00ff88); border-radius: 100%;
+            box-shadow: 0 0 14px 3px var(--nucleus-color, #00ff88);
             animation: 2s nucleus infinite cubic-bezier(.65,0,.35,1);
+            transition: background 0.3s, box-shadow 0.3s;
         }
         @keyframes nucleus { 0%,100%{transform:scale(1);}25%{transform:scale(.9);}50%{transform:scale(1);}75%{transform:scale(.85);} }
         .atom>[class^="electron"] {
@@ -138,10 +665,12 @@
         }
         .atom [class^="electron"]::after {
             content: ''; display: block; width: var(--electron-size); height: var(--electron-size);
-            background: var(--electron-color-hex); border-radius: 50%;
+            background: var(--electron-color, #ff4757); border-radius: 50%;
+            box-shadow: 0 0 8px 2px var(--electron-color, #ff4757);
             margin-top: calc(var(--electron-size) / -2);
             position: absolute; top: 50%; left: calc(var(--electron-size) / -1);
             animation: calc(var(--electron-speed) * 2) electron-dot infinite ease-in-out;
+            transition: background 0.3s, box-shadow 0.3s;
         }
         .atom .electron-alpha::after { animation-duration: calc(var(--electron-speed-alpha) * 2); }
         .atom .electron-omega::after { animation-duration: calc(var(--electron-speed-omega) * 2); }
@@ -161,110 +690,271 @@
         }
         #editable-text:focus { outline: none; }
 
-        /* SOCIAL */
+        /* SOCIAL & PROFILE */
         .hero-right { display: flex; flex-direction: column; align-items: flex-end; }
         .profile-trigger {
-            width: 90px; height: 90px; border-radius: 30px; overflow: hidden;
+            width: 86px; height: 86px; border-radius: 28px; overflow: hidden;
             border: 2px solid var(--glass-border); background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
             transition: all var(--transition-speed); cursor: pointer;
             display: flex; align-items: center; justify-content: center;
         }
-        .profile-trigger:hover { transform: scale(1.05) rotate(5deg); border-color: var(--accent-blue); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .profile-trigger:hover { transform: scale(1.05) rotate(4deg); border-color: var(--accent-blue); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
         .profile-trigger img { width: 100%; height: 100%; object-fit: cover; }
-        .social-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; }
+        .social-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.65rem; margin-top: 0.85rem; }
         .social-button {
             width: 36px; height: 36px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
             border-radius: 12px; display: flex; align-items: center; justify-content: center;
             transition: all var(--transition-speed); color: #fff; font-size: 1.1rem; text-decoration: none;
+            position: relative;
         }
-        .social-button:hover { background: #fff; color: var(--brand-color,#000); transform: translateY(-5px); }
+        .social-button:hover { background: #fff; color: var(--brand-color,#000); transform: translateY(-4px); }
         .social-button--instagram{--brand-color:#e4405f;} .social-button--youtube{--brand-color:#ff0000;}
-        .social-button--facebook{--brand-color:#3b5999;} .social-button--linkedin{--brand-color:#0077b5;}
-        .social-button--snapchat{--brand-color:#fffc00;} .social-button--github{--brand-color:#333;}
+        .social-button--x{--brand-color:#000;} .social-button--linkedin{--brand-color:#0077b5;}
+        .social-button--telegram{--brand-color:#0088cc;} .social-button--github{--brand-color:#333;}
         .social-button--codepen{--brand-color:#000;}
 
-        /* SEARCH - RECTANGULAR */
+        /* SEARCH BAR */
         .search-wrapper { display: flex; gap: 0.75rem; }
         .search-bar {
             flex: 1; background: var(--glass-bg); border: 1px solid var(--glass-border);
-            border-radius: 10px; display: flex; align-items: center; padding: 0 1.5rem;
+            backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+            border-radius: 12px; display: flex; align-items: center; padding: 0 1.5rem;
             transition: all var(--transition-speed);
         }
-        .search-bar:focus-within { background: var(--glass-bg-hover); border-color: var(--accent-blue); box-shadow: 0 0 20px rgba(0,216,255,0.1); }
-        .search-bar img { height: 1.3rem; margin-right: 1.2rem; flex-shrink: 0; }
+        .search-bar:focus-within { background: var(--glass-bg-hover); border-color: var(--accent-blue); box-shadow: 0 0 20px rgba(0,216,255,0.15); }
+        .search-bar img, .search-bar svg { height: 1.4rem; width: 1.4rem; margin-right: 0.9rem; flex-shrink: 0; }
         .search-bar input {
             flex: 1; background: none; border: none; height: 3.2rem;
             font-size: 1.05rem; color: #fff; outline: none; font-family: inherit;
         }
-        .search-bar input::placeholder { color: rgba(255,255,255,0.3); }
+        .search-bar input::placeholder { color: rgba(255,255,255,0.35); }
         .search-action-btn {
             width: 3.2rem; height: 3.2rem; background: var(--glass-bg); border: 1px solid var(--glass-border);
-            border-radius: 10px; display: grid; place-items: center;
-            transition: all var(--transition-speed); color: rgba(255,255,255,0.6); font-size: 1.1rem; cursor: pointer;
+            backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+            border-radius: 12px; display: grid; place-items: center;
+            transition: all var(--transition-speed); color: rgba(255,255,255,0.7); font-size: 1.1rem; cursor: pointer;
         }
         .search-action-btn:hover { background: var(--glass-bg-hover); color: #fff; border-color: var(--accent-blue); }
 
-        /* APPS GRID - 4 COLUMNS */
-        .section-header { display: flex; align-items: center; justify-content: space-between; }
-        .section-label { font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.3); }
+        /* SHORTCUTS (CIRCULAR NO NAME DEFAULT WITH HOVER TOOLTIP) */
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.2rem; }
+        .section-label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.35); }
         .add-shortcut-btn {
-            background: transparent; border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px;
-            color: rgba(255,255,255,0.4); font-size: 0.8rem; font-family: 'Outfit', sans-serif;
+            background: transparent; border: 1px dashed rgba(255,255,255,0.25); border-radius: 8px;
+            color: rgba(255,255,255,0.5); font-size: 0.8rem; font-family: 'Outfit', sans-serif;
             padding: 5px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.3s;
         }
-        .add-shortcut-btn:hover { color: var(--accent-blue); border-color: var(--accent-blue); background: rgba(0,216,255,0.05); }
-        .apps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; }
-        .app-link {
+        .add-shortcut-btn:hover { color: var(--accent-blue); border-color: var(--accent-blue); background: rgba(0,216,255,0.06); }
+        
+        .apps-grid {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: var(--shortcut-gap);
+            padding: 0.5rem 0; width: 100%;
+        }
+        .app-circle {
+            width: var(--shortcut-size); height: var(--shortcut-size); border-radius: 50%;
             background: var(--glass-bg); border: 1px solid var(--glass-border);
-            padding: 1.1rem 0.9rem; border-radius: 10px;
-            display: flex; align-items: center; gap: 0.75rem;
-            transition: all var(--transition-speed); text-decoration: none; color: inherit; position: relative;
+            backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+            display: flex; align-items: center; justify-content: center;
+            position: relative; text-decoration: none; color: #fff;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+            cursor: pointer; flex-shrink: 0;
         }
-        .app-link:hover { background: var(--glass-bg-hover); border-color: rgba(255,255,255,0.2); transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-        .app-link i, .app-link svg { font-size: 1.5rem; width: 1.8rem; text-align: center; flex-shrink: 0; }
-        .app-info { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
-        .app-name { font-size: 0.88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .app-url  { font-size: 0.72rem; color: rgba(255,255,255,0.4); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-top: 1px; }
-        .delete-shortcut {
-            position: absolute; top: 5px; right: 5px;
-            width: 18px; height: 18px; border-radius: 50%;
-            background: rgba(255,80,80,0.15); border: none;
-            color: rgba(255,80,80,0.6); font-size: 9px;
-            display: none; align-items: center; justify-content: center;
-            cursor: pointer; transition: all 0.2s;
+        .app-circle:hover {
+            transform: translateY(-4px) scale(1.08);
+            border-color: var(--accent-blue);
+            background: var(--glass-bg-hover);
+            box-shadow: 0 10px 25px rgba(0, 216, 255, 0.25);
         }
-        .app-link:hover .delete-shortcut { display: flex; }
-        .delete-shortcut:hover { background: rgba(255,80,80,0.4); color: #fff; }
+        .app-circle img.shortcut-icon-img {
+            width: 55%; height: 55%; border-radius: 50%; object-fit: contain;
+            pointer-events: none; transition: transform 0.2s;
+        }
+        .app-circle:hover img.shortcut-icon-img { transform: scale(1.05); }
+        .app-circle i.shortcut-icon-fa, .app-circle svg.shortcut-icon-svg {
+            font-size: calc(var(--shortcut-size) * 0.45); pointer-events: none;
+        }
+        
+        /* HOVER TOOLTIP */
+        .shortcut-tooltip {
+            position: absolute; bottom: calc(100% + 9px); left: 50%;
+            transform: translateX(-50%) translateY(4px);
+            background: rgba(18, 18, 28, 0.94); color: #fff;
+            font-size: 0.76rem; font-weight: 500; padding: 4px 10px; border-radius: 6px;
+            white-space: nowrap; pointer-events: none; opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(8px); z-index: 30;
+        }
+        .shortcut-tooltip::after {
+            content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+            border-width: 4px; border-style: solid;
+            border-color: rgba(18, 18, 28, 0.94) transparent transparent transparent;
+        }
+        .app-circle:hover .shortcut-tooltip,
+        .app-circle:hover .shortcut-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-        /* SETTINGS TRIGGER */
+        /* SIDEBAR LINK COLUMNS (Google Apps + AI Tools) */
+        .sidebar-col-block { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.2rem 0; }
+        .sidebar-col-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 0.4rem;
+        }
+        .sidebar-col-title {
+            font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 2px; color: rgba(255,255,255,0.35);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .sidebar-col-edit-btn {
+            background: transparent; border: 1px dashed rgba(255,255,255,0.2);
+            border-radius: 7px; color: rgba(255,255,255,0.45); font-size: 0.72rem;
+            font-family: 'Outfit', sans-serif; padding: 3px 9px; cursor: pointer;
+            display: flex; align-items: center; gap: 5px; transition: all 0.25s;
+        }
+        .sidebar-col-edit-btn:hover { color: var(--accent-blue); border-color: var(--accent-blue); background: rgba(0,216,255,0.06); }
+        .sidebar-link-item {
+            display: flex; align-items: center; gap: 11px;
+            text-decoration: none; color: rgba(255,255,255,0.82);
+            padding: 9px 14px; border-radius: 12px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            transition: all 0.22s ease; position: relative;
+        }
+        .sidebar-link-item:hover {
+            color: #fff; border-color: var(--accent-blue);
+            background: var(--glass-bg-hover);
+            transform: translateX(4px);
+            box-shadow: 0 4px 18px rgba(0,216,255,0.15);
+        }
+        .sidebar-link-icon {
+            width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.07); font-size: 1rem; overflow: hidden;
+        }
+        .sidebar-link-icon img { width: 22px; height: 22px; object-fit: contain; }
+        .sidebar-link-icon i { font-size: 1rem; }
+        .sidebar-link-name { font-size: 0.88rem; font-weight: 500; flex: 1; }
+        .sidebar-link-edit {
+            opacity: 0; background: none; border: none; color: rgba(255,255,255,0.4);
+            cursor: pointer; padding: 4px 6px; font-size: 0.78rem;
+            transition: opacity 0.2s, color 0.2s; border-radius: 5px;
+        }
+        .sidebar-link-item:hover .sidebar-link-edit { opacity: 1; }
+        .sidebar-link-edit:hover { color: var(--accent-blue); background: rgba(0,216,255,0.1); }
+
+        /* 5 PREBUILT LAYOUT STYLES */
+        /* 1. Classic (Default) */
+        .layout-classic #content { display: flex; flex-direction: column; gap: 1.5rem; }
+
+        /* 2. Minimal Focus */
+        .layout-minimal #main-wrapper { max-width: 780px; }
+        .layout-minimal #block-hero { order: 5; margin-top: 1rem; opacity: 0.85; }
+        .layout-minimal #block-hero .atom-wrapper { transform: scale(0.75); }
+        .layout-minimal #block-clock { order: 1; margin-top: 2rem; }
+        .layout-minimal #block-clock .clock-display { font-size: 5.5rem; }
+        .layout-minimal #block-search { order: 2; margin: 1rem 0; }
+        .layout-minimal #block-shortcuts { order: 3; }
+        .layout-minimal #block-nav { order: 4; margin-top: 1.5rem; }
+
+        /* 3. Cyber Bento Grid */
+        .layout-bento #main-wrapper { max-width: 1040px; }
+        .layout-bento #content {
+            display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.2rem;
+        }
+        .layout-bento #block-clock {
+            grid-column: span 6; background: var(--glass-bg);
+            border: 1px solid var(--glass-border); border-radius: 18px;
+            padding: 1.8rem; display: flex; flex-direction: column; justify-content: center;
+            backdrop-filter: blur(var(--glass-blur));
+        }
+        .layout-bento #block-hero {
+            grid-column: span 6; background: var(--glass-bg);
+            border: 1px solid var(--glass-border); border-radius: 18px;
+            padding: 1.2rem 1.8rem; backdrop-filter: blur(var(--glass-blur));
+        }
+        .layout-bento #block-search {
+            grid-column: span 12;
+        }
+        .layout-bento #block-shortcuts {
+            grid-column: span 8; background: var(--glass-bg);
+            border: 1px solid var(--glass-border); border-radius: 18px;
+            padding: 1.5rem; backdrop-filter: blur(var(--glass-blur));
+        }
+        .layout-bento #block-nav {
+            grid-column: span 4; background: var(--glass-bg);
+            border: 1px solid var(--glass-border); border-radius: 18px;
+            padding: 1.5rem; display: flex; flex-direction: column; justify-content: center;
+            backdrop-filter: blur(var(--glass-blur));
+        }
+        .layout-bento #block-nav .nav-links { flex-direction: column; gap: 0.8rem; align-items: flex-start; }
+
+        /* 4. Split Hero / Cyberpunk */
+        .layout-split #main-wrapper { max-width: 1000px; }
+        .layout-split #content {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;
+        }
+        .layout-split .split-col-left { display: flex; flex-direction: column; gap: 1.5rem; }
+        .layout-split .split-col-right { display: flex; flex-direction: column; gap: 1.5rem; }
+
+        /* 5. macOS Glass Dock */
+        .layout-dock #main-wrapper { max-width: 860px; padding-bottom: 5rem; }
+        .layout-dock #block-nav { order: 1; }
+        .layout-dock #block-hero { order: 2; margin-top: 1rem; }
+        .layout-dock #block-clock { order: 3; margin-top: 0.5rem; }
+        .layout-dock #block-search { order: 4; }
+        .layout-dock #block-shortcuts {
+            position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+            background: rgba(24, 24, 37, 0.82); border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 35px; padding: 10px 24px; z-index: 100;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 25px rgba(0,216,255,0.15);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            width: auto; max-width: 90vw;
+        }
+        .layout-dock #block-shortcuts .section-header { display: none; }
+        .layout-dock .apps-grid { padding: 0; }
+
+        /* PREVIEW CARDS IN SETTINGS */
+        .layout-preset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+        .layout-preset-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 10px; padding: 10px 8px; text-align: center; cursor: pointer;
+            transition: all 0.2s; font-size: 0.78rem; display: flex; flex-direction: column; gap: 4px;
+        }
+        .layout-preset-card:hover { background: var(--glass-bg-hover); border-color: var(--accent-blue); transform: translateY(-2px); }
+        .layout-preset-card.active { border-color: var(--accent-blue); background: rgba(0,216,255,0.12); font-weight: 700; color: var(--accent-blue); }
+        .layout-preset-card i { font-size: 1.3rem; margin-bottom: 2px; }
+
+        /* SETTINGS TRIGGER & PANEL */
         .settings-trigger {
             position: fixed; top: 1.5rem; right: 1.5rem; width: 44px; height: 44px;
             background: var(--glass-bg); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
             border-radius: 12px; display: grid; place-items: center;
             cursor: pointer; transition: all 0.35s; z-index: 100;
-            color: rgba(255,255,255,0.5); font-size: 1.1rem;
+            color: rgba(255,255,255,0.7); font-size: 1.1rem;
         }
         .settings-trigger:hover { border-color: var(--accent-blue); color: var(--accent-blue); transform: rotate(60deg); }
 
-        /* SETTINGS PANEL */
         .settings-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.55);
-            backdrop-filter: blur(5px); z-index: 200;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px); z-index: 200;
             display: none; align-items: flex-start; justify-content: flex-end; padding: 1rem;
         }
         .settings-overlay.open { display: flex; }
         .settings-panel {
-            width: 340px; max-height: calc(100vh - 2rem); background: #181825;
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
+            width: 350px; max-height: calc(100vh - 2rem); background: rgba(22, 22, 34, 0.88);
+            backdrop-filter: blur(calc(var(--glass-blur) * 1.5)); -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.5));
+            border: 1px solid rgba(255,255,255,0.12); border-radius: 18px;
             overflow-y: auto; padding: 1.5rem;
             display: flex; flex-direction: column; gap: 1.4rem;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+            box-shadow: 0 24px 64px rgba(0,0,0,0.75);
         }
         .settings-panel::-webkit-scrollbar { width: 4px; }
-        .settings-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+        .settings-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
         .settings-header { display: flex; align-items: center; justify-content: space-between; }
         .settings-title { font-weight: 700; font-size: 1.05rem; color: #fff; }
-        .settings-close { background: none; border: none; color: rgba(255,255,255,0.4); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
+        .settings-close { background: none; border: none; color: rgba(255,255,255,0.5); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
         .settings-close:hover { color: #fff; }
         .settings-group { display: flex; flex-direction: column; gap: 0.85rem; }
         .settings-group-title {
@@ -272,7 +962,7 @@
             color: var(--accent-blue); border-bottom: 1px solid rgba(0,216,255,0.15); padding-bottom: 0.4rem;
         }
         .setting-row { display: flex; align-items: center; justify-content: space-between; }
-        .setting-label { font-size: 0.85rem; color: rgba(255,255,255,0.65); }
+        .setting-label { font-size: 0.85rem; color: rgba(255,255,255,0.7); }
         .color-input-wrap { width: 36px; height: 28px; }
         input[type="color"] { width: 36px; height: 28px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); cursor: pointer; padding: 2px; background: none; -webkit-appearance: none; }
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
@@ -280,68 +970,205 @@
         .toggle-wrap { display: flex; gap: 4px; }
         .toggle-btn {
             padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12);
-            background: transparent; color: rgba(255,255,255,0.45); font-size: 0.8rem;
+            background: transparent; color: rgba(255,255,255,0.5); font-size: 0.8rem;
             font-family: 'Outfit', sans-serif; cursor: pointer; transition: all 0.2s;
         }
         .toggle-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: #000; font-weight: 700; }
+        .settings-action-btns { display: flex; flex-direction: column; gap: 0.55rem; }
+        .settings-btn {
+            width: 100%; padding: 9px 14px; border-radius: 8px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            color: rgba(255,255,255,0.9); font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.25s;
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+        }
+        .settings-btn:hover {
+            background: var(--glass-bg-hover); border-color: var(--accent-blue);
+            color: #fff; transform: translateY(-1px);
+        }
+        .settings-btn.primary {
+            background: rgba(0,216,255,0.15); border-color: var(--accent-blue); color: #fff;
+        }
+        .bg-preview-wrap {
+            display: none; position: relative; width: 100%; height: 80px;
+            border-radius: 10px; overflow: hidden; border: 1px solid var(--glass-border);
+            margin-bottom: 2px;
+        }
+        .bg-preview-wrap.active { display: block; }
+        .bg-preview-img { width: 100%; height: 100%; object-fit: cover; }
+        .bg-preview-remove {
+            position: absolute; top: 6px; right: 6px;
+            background: rgba(0,0,0,0.65); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.3);
+            border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; cursor: pointer;
+            font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 4px;
+            transition: all 0.2s; backdrop-filter: blur(4px);
+        }
+        .bg-preview-remove:hover { background: rgba(255,80,80,0.85); color: #fff; }
+        .bg-url-row { display: flex; gap: 6px; }
+        .bg-url-input {
+            flex: 1; background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 8px; padding: 7px 10px; color: #fff; font-family: 'Outfit', sans-serif;
+            font-size: 0.82rem; outline: none; transition: border-color 0.2s; min-width: 0;
+        }
+        .bg-url-input:focus { border-color: var(--accent-blue); }
+        .bg-apply-btn {
+            padding: 0 14px; border-radius: 8px; border: 1px solid var(--accent-blue);
+            background: var(--accent-blue); color: #000; font-family: 'Outfit', sans-serif;
+            font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .bg-apply-btn:hover { filter: brightness(1.1); }
+        .slider-row { display: flex; flex-direction: column; gap: 5px; }
+        .slider-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: rgba(255,255,255,0.7); }
+        .slider-header span:last-child { color: var(--accent-blue); font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; }
+        input[type="range"] {
+            -webkit-appearance: none; width: 100%; height: 5px; border-radius: 5px;
+            background: rgba(255,255,255,0.15); outline: none; transition: background 0.2s; cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 14px; height: 14px;
+            border-radius: 50%; background: var(--accent-blue); cursor: pointer;
+            box-shadow: 0 0 6px rgba(0,216,255,0.6);
+        }
         .reset-btn {
-            width: 100%; padding: 8px; border-radius: 8px;
+            width: 100%; padding: 9px; border-radius: 8px;
             background: rgba(255,80,80,0.08); border: 1px solid rgba(255,80,80,0.18);
             color: rgba(255,100,100,0.75); font-family: 'Outfit', sans-serif;
             font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
         }
         .reset-btn:hover { background: rgba(255,80,80,0.18); color: #ff6b6b; }
 
-        /* MODAL */
+        /* TOAST NOTIFICATION */
+        .toast-container {
+            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+            z-index: 2000; pointer-events: none;
+        }
+        .toast-notification {
+            background: rgba(22, 22, 34, 0.95); border: 1px solid var(--accent-blue);
+            color: #fff; padding: 10px 20px; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(0,216,255,0.25);
+            font-size: 0.9rem; font-family: 'Outfit', sans-serif;
+            display: flex; align-items: center; gap: 8px;
+            opacity: 0; transform: translateY(10px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+        .toast-notification.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .toast-notification.error {
+            border-color: #ff6b6b; box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(255,107,107,0.25);
+        }
+
+        /* MODALS */
         .modal-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-            backdrop-filter: blur(6px); z-index: 300;
-            display: none; align-items: center; justify-content: center;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px); z-index: 300;
+            display: none; align-items: center; justify-content: center; padding: 1rem;
         }
         .modal-overlay.open { display: flex; }
         .modal {
-            background: #181825; border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 16px; padding: 2rem; width: 360px;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.7);
-            display: flex; flex-direction: column; gap: 1.1rem;
+            background: rgba(22, 22, 34, 0.92); border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(calc(var(--glass-blur) * 1.5)); -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.5));
+            border-radius: 18px; padding: 1.8rem; width: 100%; max-width: 480px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.8);
+            display: flex; flex-direction: column; gap: 1.2rem;
+            max-height: 90vh; overflow-y: auto;
         }
-        .modal-title { font-size: 1.05rem; font-weight: 700; }
+        .modal-large { max-width: 620px; }
+        .modal-title { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: space-between; }
         .modal-field { display: flex; flex-direction: column; gap: 0.45rem; }
-        .modal-field label { font-size: 0.8rem; color: rgba(255,255,255,0.45); }
+        .modal-field label { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
         .modal-field input, .modal-field select {
             background: var(--glass-bg); border: 1px solid var(--glass-border);
             border-radius: 8px; padding: 9px 13px; color: #fff;
             font-family: 'Outfit', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s;
         }
         .modal-field input:focus, .modal-field select:focus { border-color: var(--accent-blue); }
-        .modal-field select option { background: #181825; }
-        .modal-actions { display: flex; gap: 0.75rem; }
+        .modal-field select option { background: #181825; color: #fff; }
+        .modal-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
         .modal-btn { flex: 1; padding: 10px; border-radius: 8px; border: none; font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .modal-btn-cancel { background: var(--glass-bg); color: rgba(255,255,255,0.6); border: 1px solid var(--glass-border); }
-        .modal-btn-cancel:hover { color: #fff; }
-        .modal-btn-add { background: var(--accent-blue); color: #000; }
-        .modal-btn-add:hover { filter: brightness(1.1); }
+        .modal-btn-cancel { background: var(--glass-bg); color: rgba(255,255,255,0.7); border: 1px solid var(--glass-border); }
+        .modal-btn-cancel:hover { color: #fff; background: var(--glass-bg-hover); }
+        .modal-btn-primary { background: var(--accent-blue); color: #000; }
+        .modal-btn-primary:hover { filter: brightness(1.1); }
 
+        /* MANAGE SHORTCUTS LIST */
+        .manage-tabs { display: flex; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 0.5rem; }
+        .manage-tab-btn {
+            background: transparent; border: none; color: rgba(255,255,255,0.5);
+            font-family: inherit; font-size: 0.85rem; font-weight: 600; padding: 6px 12px;
+            border-radius: 8px; cursor: pointer; transition: all 0.2s;
+        }
+        .manage-tab-btn.active { background: var(--glass-bg); color: var(--accent-blue); }
+        .shortcut-item-row {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 10px; padding: 8px 12px; gap: 10px; margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        .shortcut-item-row:hover { border-color: rgba(255,255,255,0.25); background: var(--glass-bg-hover); }
+        .shortcut-item-info { display: flex; align-items: center; gap: 10px; flex: 1; overflow: hidden; }
+        .shortcut-item-icon { width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .shortcut-item-icon img { width: 22px; height: 22px; border-radius: 50%; object-fit: contain; }
+        .shortcut-item-texts { display: flex; flex-direction: column; overflow: hidden; }
+        .shortcut-item-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .shortcut-item-url { font-size: 0.72rem; color: rgba(255,255,255,0.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .shortcut-item-actions { display: flex; gap: 6px; }
+        .item-action-btn {
+            background: transparent; border: 1px solid var(--glass-border);
+            color: rgba(255,255,255,0.6); width: 30px; height: 30px; border-radius: 6px;
+            cursor: pointer; display: grid; place-items: center; font-size: 0.8rem; transition: all 0.2s;
+        }
+        .item-action-btn:hover { color: #fff; border-color: var(--accent-blue); background: var(--glass-bg); }
+        .item-action-btn.delete:hover { color: #ff6b6b; border-color: #ff6b6b; background: rgba(255,80,80,0.1); }
+
+        /* SELECTIVE IMPORT/EXPORT MODAL */
+        .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+        .checkbox-item {
+            display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 8px; cursor: pointer; user-select: none; font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .checkbox-item:hover { border-color: var(--accent-blue); background: var(--glass-bg-hover); }
+        .checkbox-item input[type="checkbox"] {
+            accent-color: var(--accent-blue); width: 16px; height: 16px; cursor: pointer;
+        }
+
+        /* RESPONSIVE */
         @media (max-width: 768px) {
             .clock-display { font-size: 3rem; }
             .hero-header { flex-direction: column; gap: 1.5rem; }
             .hero-right { align-items: center; }
             .social-buttons { justify-content: center; }
-            .apps-grid { grid-template-columns: repeat(2, 1fr); }
+            .layout-bento #content { display: flex; flex-direction: column; }
+            .layout-split #content { display: flex; flex-direction: column; }
         }
-        @media (max-width: 480px) { .apps-grid { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
 <body>
 
+<div class="custom-bg" id="customBg"></div>
+<div class="bg-overlay" id="bgOverlay"></div>
 <div class="bg-gradient"></div>
 
-<!-- Settings Trigger -->
+<!-- LAYOUT EDITOR FLOATING BAR -->
+<div class="layout-editor-bar" id="layoutEditorBar">
+    <span>🎨 <strong>Layout Editor Mode</strong></span>
+    <button class="layout-editor-btn save" onclick="saveCustomLayout()"><i class="fas fa-check"></i> Save Layout</button>
+    <button class="layout-editor-btn" onclick="resetBlockSizes()"><i class="fas fa-arrows-alt-h"></i> Reset Sizes</button>
+    <button class="layout-editor-btn" onclick="resetToPresetLayout()"><i class="fas fa-undo"></i> Reset Order</button>
+    <button class="layout-editor-btn" onclick="toggleLayoutEditor(false)"><i class="fas fa-times"></i> Exit</button>
+</div>
+
+<!-- QUICK FOCUS MODE TRIGGER -->
+<button class="focus-quick-trigger" onclick="setLayoutPreset(currentLayout === 'focus' ? 'classic' : 'focus')" title="Toggle Focus Mode">
+    <i class="fas fa-bullseye" style="color:var(--accent-blue);"></i> Focus Mode
+</button>
+
+<!-- SETTINGS TRIGGER -->
 <button class="settings-trigger" id="settingsBtn" title="Settings">
     <i class="fas fa-cog"></i>
 </button>
 
-<!-- Settings Overlay -->
+<!-- SETTINGS OVERLAY -->
 <div class="settings-overlay" id="settingsOverlay">
     <div class="settings-panel">
         <div class="settings-header">
@@ -349,17 +1176,89 @@
             <button class="settings-close" id="settingsClose"><i class="fas fa-times"></i></button>
         </div>
 
+        <!-- 0. User Profile & Avatar -->
+        <div class="settings-group">
+            <div class="settings-group-title">User Profile & Avatar</div>
+            <div style="display:flex; align-items:center; gap:14px; padding:4px 0;">
+                <div style="width:54px; height:54px; border-radius:18px; overflow:hidden; border:2px solid var(--accent-blue); flex-shrink:0; background:var(--glass-bg); display:flex; align-items:center; justify-content:center;">
+                    <img id="settingsProfilePreview" src="dp.png" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null;this.src='dp.png';">
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
+                    <div style="display:flex; gap:8px;">
+                        <button class="settings-btn primary" style="padding:6px 12px; font-size:0.8rem; flex:1;" onclick="triggerProfileUpload()"><i class="fas fa-upload"></i> Upload Photo</button>
+                        <button class="settings-btn" style="padding:5px 12px; font-size:0.78rem;" onclick="removeProfilePhoto()"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    <input type="file" id="profileFileInput" accept="image/*" style="display:none" onchange="handleProfileFileUpload(event)">
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. Layout Presets & Editor -->
+        <div class="settings-group">
+            <div class="settings-group-title">Layout & Presets</div>
+            <div class="layout-preset-grid" id="layoutPresetGrid">
+                <div class="layout-preset-card active" data-preset="classic" onclick="setLayoutPreset('classic')">
+                    <i class="fas fa-th-large"></i>
+                    <span>Classic Stack</span>
+                </div>
+                <div class="layout-preset-card" data-preset="focus" onclick="setLayoutPreset('focus')">
+                    <i class="fas fa-bullseye"></i>
+                    <span>Focus Mode</span>
+                </div>
+                <div class="layout-preset-card" data-preset="minimal" onclick="setLayoutPreset('minimal')">
+                    <i class="fas fa-compress-arrows-alt"></i>
+                    <span>Minimal Focus</span>
+                </div>
+                <div class="layout-preset-card" data-preset="bento" onclick="setLayoutPreset('bento')">
+                    <i class="fas fa-columns"></i>
+                    <span>Cyber Bento</span>
+                </div>
+                <div class="layout-preset-card" data-preset="split" onclick="setLayoutPreset('split')">
+                    <i class="fas fa-grip-vertical"></i>
+                    <span>Split Hero</span>
+                </div>
+                <div class="layout-preset-card" data-preset="dock" onclick="setLayoutPreset('dock')">
+                    <i class="fas fa-window-maximize"></i>
+                    <span>macOS Dock</span>
+                </div>
+                <div class="layout-preset-card" data-preset="custom" onclick="setLayoutPreset('custom')">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Custom Freeform</span>
+                </div>
+            </div>
+            <button class="settings-btn primary" onclick="toggleLayoutEditor(true)">
+                <i class="fas fa-mouse-pointer"></i> Edit Layout with Mouse
+            </button>
+        </div>
+
+        <!-- 2. Manage Shortcuts -->
+        <div class="settings-group">
+            <div class="settings-group-title">Manage Shortcuts</div>
+            <button class="settings-btn primary" onclick="openManageShortcutsModal()">
+                <i class="fas fa-icons"></i> Manage Top & Bottom Shortcuts
+            </button>
+            <div class="slider-row">
+                <div class="slider-header">
+                    <span>Shortcut Circle Size</span>
+                    <span id="shortcutSizeVal">58px</span>
+                </div>
+                <input type="range" id="shortcutSizeRange" min="42" max="78" value="58" oninput="setShortcutSize(this.value)">
+            </div>
+        </div>
+
+        <!-- 3. Clock Format -->
         <div class="settings-group">
             <div class="settings-group-title">Clock Format</div>
             <div class="setting-row">
                 <span class="setting-label">Time Format</span>
                 <div class="toggle-wrap">
-                    <button class="toggle-btn active" id="fmt12" onclick="setFormat(12)">12h</button>
-                    <button class="toggle-btn" id="fmt24" onclick="setFormat(24)">24h</button>
+                    <button class="toggle-btn" id="btn12" onclick="setFormat(12)">12H</button>
+                    <button class="toggle-btn" id="btn24" onclick="setFormat(24)">24H</button>
                 </div>
             </div>
         </div>
 
+        <!-- 4. Clock & Date Colors -->
         <div class="settings-group">
             <div class="settings-group-title">Clock Colors</div>
             <div class="setting-row"><span class="setting-label">Hours</span>
@@ -382,60 +1281,278 @@
                 <div class="color-input-wrap"><input type="color" id="colorDate" value="#cccccc" oninput="setCSSVar('--clock-date-color',this.value,'colorDate')"></div></div>
         </div>
 
+        <!-- 5. Theme & Atom Colors -->
         <div class="settings-group">
-            <div class="settings-group-title">Theme</div>
+            <div class="settings-group-title">Theme & Atom</div>
             <div class="setting-row"><span class="setting-label">Accent Color</span>
                 <div class="color-input-wrap"><input type="color" id="colorAccent" value="#00d8ff" oninput="setAccentColor(this.value)"></div></div>
+            <div class="setting-row"><span class="setting-label">Atom Nucleus</span>
+                <div class="color-input-wrap"><input type="color" id="colorNucleus" value="#00ff88" oninput="setNucleusColor(this.value)"></div></div>
+            <div class="setting-row"><span class="setting-label">Atom Electrons</span>
+                <div class="color-input-wrap"><input type="color" id="colorElectron" value="#ff4757" oninput="setElectronColor(this.value)"></div></div>
+        </div>
+
+        <!-- 6. Glass & Blur Effect -->
+        <div class="settings-group">
+            <div class="settings-group-title">Glass & Blur Effect</div>
+            <div class="slider-row">
+                <div class="slider-header">
+                    <span>Card Blur Intensity</span>
+                    <span id="glassBlurVal">12px</span>
+                </div>
+                <input type="range" id="glassBlurRange" min="0" max="30" value="12" oninput="setGlassBlur(this.value)">
+            </div>
+            <div class="slider-row">
+                <div class="slider-header">
+                    <span>Card Glass Opacity</span>
+                    <span id="glassOpacityVal">8%</span>
+                </div>
+                <input type="range" id="glassOpacityRange" min="0" max="40" value="8" oninput="setGlassOpacity(this.value)">
+            </div>
+        </div>
+
+        <!-- 7. Background Wallpaper -->
+        <div class="settings-group">
+            <div class="settings-group-title">Background Wallpaper</div>
+            <div class="bg-preview-wrap" id="bgPreviewWrap">
+                <img class="bg-preview-img" id="bgPreviewImg" src="" alt="Wallpaper Preview">
+                <button class="bg-preview-remove" onclick="removeBackground()" title="Remove custom wallpaper"><i class="fas fa-trash-alt"></i> Remove</button>
+            </div>
+            <div class="bg-url-row">
+                <input type="text" class="bg-url-input" id="bgUrlInput" placeholder="Image URL (e.g. https://...)" onkeypress="if(event.key==='Enter')applyBgUrl()">
+                <button class="bg-apply-btn" onclick="applyBgUrl()">Set</button>
+            </div>
+            <button class="settings-btn" onclick="triggerBgUpload()" title="Choose an image file from your device">
+                <i class="fas fa-image"></i> From Device
+            </button>
+            <input type="file" id="bgFileInput" accept="image/*" style="display:none" onchange="handleBgFileUpload(event)">
+
+            <div class="slider-row">
+                <div class="slider-header">
+                    <span>Darkness / Dim</span>
+                    <span id="dimVal">40%</span>
+                </div>
+                <input type="range" id="bgDimRange" min="0" max="90" value="40" oninput="setBgDim(this.value)">
+            </div>
+            <div class="slider-row">
+                <div class="slider-header">
+                    <span>Wallpaper Blur</span>
+                    <span id="blurVal">0px</span>
+                </div>
+                <input type="range" id="bgBlurRange" min="0" max="20" value="0" oninput="setBgBlur(this.value)">
+            </div>
+        </div>
+
+        <!-- 8. Backup & Restore (Full + Granular) -->
+        <div class="settings-group">
+            <div class="settings-group-title">Backup & Restore</div>
+            <div class="settings-action-btns">
+                <button class="settings-btn" onclick="exportSettings(null)" title="Export all settings to JSON file">
+                    <i class="fas fa-file-export"></i> Export All Settings
+                </button>
+                <button class="settings-btn" onclick="triggerImport()" title="Import settings from JSON file">
+                    <i class="fas fa-file-import"></i> Quick Import JSON
+                </button>
+                <button class="settings-btn primary" onclick="openCustomBackupModal()" title="Choose specific parts to import or export">
+                    <i class="fas fa-sliders-h"></i> Custom Import / Export...
+                </button>
+                <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="handleImportFile(event)">
+            </div>
         </div>
 
         <button class="reset-btn" onclick="resetSettings()">↩ Reset All to Default</button>
     </div>
 </div>
 
-<!-- Add Shortcut Modal -->
-<div class="modal-overlay" id="shortcutModal">
-    <div class="modal">
-        <div class="modal-title">➕ Add Shortcut</div>
-        <div class="modal-field">
-            <label>Name</label>
-            <input type="text" id="shortcutName" placeholder="e.g. Dev Rahul's Site" maxlength="30">
+<!-- TOAST NOTIFICATION CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- MANAGE SHORTCUTS MODAL -->
+<div class="modal-overlay" id="manageShortcutsModal">
+    <div class="modal modal-large">
+        <div class="modal-title">
+            <span>⚙️ Manage Shortcuts & Links</span>
+            <button class="settings-close" onclick="closeManageShortcutsModal()"><i class="fas fa-times"></i></button>
         </div>
-        <div class="modal-field">
-            <label>URL</label>
-            <input type="text" id="shortcutUrl" placeholder="e.g. devrahul.in or https://...">
+
+        <div class="manage-tabs">
+            <button class="manage-tab-btn active" id="tabBottomBtn" onclick="switchManageTab('bottom')">Bottom Circular Apps (<span id="bottomCount">0</span>)</button>
+            <button class="manage-tab-btn" id="tabNavBtn" onclick="switchManageTab('nav')">Top Nav Links (<span id="navCount">0</span>)</button>
+            <button class="manage-tab-btn" id="tabSocialBtn" onclick="switchManageTab('social')">Hero Socials (<span id="socialCount">0</span>)</button>
         </div>
-        <div class="modal-field">
-            <label>Icon</label>
-            <select id="shortcutIcon">
-                <option value="fa-globe">🌐 Globe</option>
-                <option value="fa-code">💻 Code</option>
-                <option value="fa-link">🔗 Link</option>
-                <option value="fa-star">⭐ Star</option>
-                <option value="fa-bookmark">🔖 Bookmark</option>
-                <option value="fa-briefcase">💼 Briefcase</option>
-                <option value="fa-music">🎵 Music</option>
-                <option value="fa-gamepad">🎮 Game</option>
-                <option value="fa-newspaper">📰 News</option>
-                <option value="fa-shopping-cart">🛒 Shop</option>
-                <option value="fa-paint-brush">🎨 Design</option>
-                <option value="fa-video">🎬 Video</option>
-                <option value="fa-cloud">☁️ Cloud</option>
-                <option value="fa-database">🗃️ Database</option>
-            </select>
+
+        <div style="display:flex; justify-content:flex-end; margin-bottom:4px;">
+            <button class="settings-btn" style="width:auto; padding:6px 14px;" onclick="openAddShortcutDialog()">
+                <i class="fas fa-plus"></i> Add New Link
+            </button>
         </div>
+
+        <div id="manageShortcutsList" style="max-height:360px; overflow-y:auto; padding-right:4px;"></div>
+
         <div class="modal-actions">
-            <button class="modal-btn modal-btn-cancel" onclick="closeShortcutModal()">Cancel</button>
-            <button class="modal-btn modal-btn-add" onclick="addShortcut()">Add</button>
+            <button class="modal-btn modal-btn-cancel" onclick="closeManageShortcutsModal()">Done</button>
         </div>
     </div>
 </div>
 
-<!-- MAIN -->
-<div id="main-wrapper">
+<!-- ADD / EDIT SHORTCUT SUB-MODAL -->
+<div class="modal-overlay" id="editShortcutModal">
+    <div class="modal">
+        <div class="modal-title" id="editShortcutModalTitle">➕ Add Shortcut</div>
+        <div class="modal-field">
+            <label>Category</label>
+            <select id="editShortcutCategory">
+                <option value="bottom">Bottom Circular App</option>
+                <option value="nav">Top Nav Link</option>
+                <option value="social">Hero Social Icon</option>
+            </select>
+        </div>
+        <div class="modal-field">
+            <label>Name / Tooltip Title</label>
+            <input type="text" id="editShortcutName" placeholder="e.g. GitHub, YouTube" maxlength="30">
+        </div>
+        <div class="modal-field">
+            <label>URL</label>
+            <input type="text" id="editShortcutUrl" placeholder="e.g. https://github.com" oninput="onUrlInputPreview(this.value)">
+        </div>
+        <div class="modal-field">
+            <label>Icon Style</label>
+            <select id="editShortcutIconType" onchange="onIconTypeChange()">
+                <option value="auto">🌐 Automatic Internet Favicon</option>
+                <option value="fa">🎨 FontAwesome Icon</option>
+                <option value="custom">🖼️ Custom Image URL</option>
+            </select>
+        </div>
+        <div class="modal-field" id="faSelectField" style="display:none;">
+            <label>FontAwesome Icon</label>
+            <select id="editShortcutFaIcon" onchange="updateIconPreview()">
+                <option value="fa-globe">🌐 Globe (fa-globe)</option>
+                <option value="fa-code">💻 Code (fa-code)</option>
+                <option value="fa-link">🔗 Link (fa-link)</option>
+                <option value="fa-star">⭐ Star (fa-star)</option>
+                <option value="fa-bookmark">🔖 Bookmark (fa-bookmark)</option>
+                <option value="fa-briefcase">💼 Briefcase (fa-briefcase)</option>
+                <option value="fa-music">🎵 Music (fa-music)</option>
+                <option value="fa-gamepad">🎮 Game (fa-gamepad)</option>
+                <option value="fa-newspaper">📰 News (fa-newspaper)</option>
+                <option value="fa-shopping-cart">🛒 Shop (fa-shopping-cart)</option>
+                <option value="fa-paint-brush">🎨 Paint (fa-paint-brush)</option>
+                <option value="fa-video">🎬 Video (fa-video)</option>
+                <option value="fa-cloud">☁️ Cloud (fa-cloud)</option>
+                <option value="fa-database">🗃️ Database (fa-database)</option>
+                <option value="fab fa-github">GitHub (fab fa-github)</option>
+                <option value="fab fa-youtube">YouTube (fab fa-youtube)</option>
+                <option value="fab fa-instagram">Instagram (fab fa-instagram)</option>
+                <option value="fab fa-twitter">Twitter (fab fa-twitter)</option>
+                <option value="fab fa-reddit">Reddit (fab fa-reddit)</option>
+                <option value="fab fa-discord">Discord (fab fa-discord)</option>
+            </select>
+        </div>
+        <div class="modal-field" id="customIconField" style="display:none;">
+            <label>Custom Image URL</label>
+            <input type="text" id="editShortcutCustomIcon" placeholder="https://.../icon.png" oninput="updateIconPreview()">
+        </div>
+
+        <div style="display:flex; align-items:center; gap:12px; padding:8px; background:var(--glass-bg); border-radius:10px;">
+            <span style="font-size:0.8rem; color:rgba(255,255,255,0.6);">Live Preview:</span>
+            <div id="liveShortcutPreview" style="width:48px; height:48px; border-radius:50%; background:var(--glass-bg); border:1px solid var(--glass-border); display:flex; align-items:center; justify-content:center;">
+                <i class="fas fa-globe" style="font-size:1.4rem; color:var(--accent-blue);"></i>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeEditShortcutDialog()">Cancel</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveShortcutItem()">Save Shortcut</button>
+        </div>
+    </div>
+</div>
+
+<!-- CUSTOM / SELECTIVE IMPORT & EXPORT MODAL -->
+<div class="modal-overlay" id="customBackupModal">
+    <div class="modal">
+        <div class="modal-title">
+            <span>⚙️ Custom Backup & Restore</span>
+            <button class="settings-close" onclick="closeCustomBackupModal()"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <p style="font-size:0.82rem; color:rgba(255,255,255,0.65);">Select which dashboard modules to export or import:</p>
+
+        <div class="checkbox-group">
+            <label class="checkbox-item"><input type="checkbox" id="chkClock" checked> 🕒 Clock & Date (Format, Colors)</label>
+            <label class="checkbox-item"><input type="checkbox" id="chkAtom" checked> ⚛️ Atom & Theme Colors (Nucleus, Electrons, Accent)</label>
+            <label class="checkbox-item"><input type="checkbox" id="chkGlass" checked> 🪟 Glassmorphism & Background Wallpaper (Image, Dim, Blur)</label>
+            <label class="checkbox-item"><input type="checkbox" id="chkShortcuts" checked> 🌐 Shortcuts & Navigation (Top & Bottom Links, Sizes)</label>
+            <label class="checkbox-item"><input type="checkbox" id="chkLayout" checked> 📐 Dashboard Layout & Component Positions</label>
+        </div>
+
+        <div class="modal-actions" style="flex-direction:column; gap:8px;">
+            <button class="modal-btn modal-btn-primary" onclick="exportSelectedSettings()"><i class="fas fa-download"></i> Export Selected Modules</button>
+            <button class="modal-btn modal-btn-cancel" onclick="triggerCustomImport()"><i class="fas fa-upload"></i> Import File for Selected Modules</button>
+            <input type="file" id="customImportFileInput" accept=".json,application/json" style="display:none" onchange="handleCustomImportFile(event)">
+        </div>
+    </div>
+</div>
+
+<!-- EDIT FOCUS SHORTCUTS MODAL -->
+<div class="modal-overlay" id="focusShortcutsModal">
+    <div class="modal">
+        <div class="modal-title">
+            <span>🎯 Customize Focus Shortcuts (Max 2)</span>
+            <button class="settings-close" onclick="closeFocusShortcutsModal()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:1.2rem; margin-top:0.5rem;">
+            <!-- Shortcut 1 -->
+            <div style="background:rgba(255,255,255,0.05); padding:1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+                <h4 style="color:var(--accent-blue); margin-bottom:0.6rem; font-size:0.9rem;">Shortcut 1</h4>
+                <div class="modal-field">
+                    <label>Name</label>
+                    <input type="text" id="fsc1Name" placeholder="e.g. Google">
+                </div>
+                <div class="modal-field" style="margin-top:0.4rem;">
+                    <label>URL</label>
+                    <input type="text" id="fsc1Url" placeholder="https://google.com">
+                </div>
+                <div class="modal-field" style="margin-top:0.4rem;">
+                    <label>FontAwesome Icon / Image URL</label>
+                    <input type="text" id="fsc1Icon" placeholder="fab fa-google">
+                </div>
+            </div>
+
+            <!-- Shortcut 2 -->
+            <div style="background:rgba(255,255,255,0.05); padding:1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+                <h4 style="color:var(--accent-blue); margin-bottom:0.6rem; font-size:0.9rem;">Shortcut 2</h4>
+                <div class="modal-field">
+                    <label>Name</label>
+                    <input type="text" id="fsc2Name" placeholder="e.g. ChatGPT">
+                </div>
+                <div class="modal-field" style="margin-top:0.4rem;">
+                    <label>URL</label>
+                    <input type="text" id="fsc2Url" placeholder="https://chatgpt.com">
+                </div>
+                <div class="modal-field" style="margin-top:0.4rem;">
+                    <label>FontAwesome Icon / Image URL</label>
+                    <input type="text" id="fsc2Icon" placeholder="fas fa-robot">
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-actions" style="margin-top:0.8rem;">
+            <button class="modal-btn modal-btn-cancel" onclick="closeFocusShortcutsModal()">Cancel</button>
+            <button class="modal-btn modal-btn-primary" onclick="saveFocusShortcuts()">Save Focus Shortcuts</button>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div id="main-wrapper" class="layout-classic">
     <main id="content">
 
-        <!-- Clock -->
-        <section class="clock-section">
+
+
+        <!-- 2. CLOCK & DATE -->
+        <section class="layout-block clock-section" id="block-clock" data-block-id="clock">
+            <div class="block-drag-handle">Clock & Date</div>
             <div class="clock-display">
                 <span class="clock-hours" id="clockH">12</span>
                 <span class="clock-colon">:</span>
@@ -449,18 +1566,12 @@
                 <span class="date-sep">•</span>
                 <span class="date-date" id="dateDate">January 1, 2025</span>
             </div>
+            <div class="block-resize-handle"></div>
         </section>
 
-        <!-- Nav -->
-        <nav class="nav-links">
-            <a href="https://gmail.com"><i class="fas fa-envelope"></i> Gmail</a>
-            <a href="https://unsplash.com"><i class="fas fa-camera"></i> Unsplash</a>
-            <a href="http://www.devrahul.in"><i class="fas fa-globe"></i> My Site</a>
-            <a href="https://beacons.ai/developerrahul"><i class="fas fa-info-circle"></i> About</a>
-        </nav>
-
-        <!-- Hero: Atom+Text | Profile+Social -->
-        <header class="hero-header">
+        <!-- 3. HERO (ATOM + QUOTE + PROFILE + SOCIAL) -->
+        <section class="layout-block hero-header" id="block-hero" data-block-id="hero">
+            <div class="block-drag-handle">Atom & Profile</div>
             <div class="atom-block">
                 <div class="atom-wrapper">
                     <div class="atom">
@@ -477,25 +1588,25 @@
             </div>
 
             <div class="hero-right">
-                <button type="button" class="profile-trigger">
-                    <img src="dp.png" alt="Profile" onerror="this.outerHTML='<i class=\'fas fa-user\' style=\'font-size:2.5rem;color:rgba(255,255,255,0.4)\'></i>'">
+                <button type="button" class="profile-trigger" id="profileTrigger" title="Developer Profile">
+                    <img src="dp.png" alt="Profile" onerror="this.outerHTML='<i class=\'fas fa-user\' style=\'font-size:2.4rem;color:rgba(255,255,255,0.4)\'></i>'">
                 </button>
-                <div class="social-buttons">
-                    <a href="https://www.instagram.com/developer_rahul_/" class="social-button social-button--instagram"><i class="fab fa-instagram"></i></a>
-                    <a href="https://www.youtube.com/channel/UCzB2vC0kH-PPbrGmqeII9hQ" class="social-button social-button--youtube"><i class="fab fa-youtube"></i></a>
-                    <a href="https://www.facebook.com/rahul.sahni.169/" class="social-button social-button--facebook"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="social-button social-button--linkedin"><i class="fab fa-linkedin-in"></i></a>
-                    <a href="#" class="social-button social-button--snapchat"><i class="fab fa-snapchat-ghost"></i></a>
-                    <a href="https://github.com/Rahul-Kumar-Sahni" class="social-button social-button--github"><i class="fab fa-github"></i></a>
-                    <a href="https://codepen.io/rahul-sahni" class="social-button social-button--codepen"><i class="fab fa-codepen"></i></a>
-                </div>
+                <div class="social-buttons" id="social-container"></div>
             </div>
-        </header>
+            <div class="block-resize-handle"></div>
+        </section>
 
-        <!-- Search - RECTANGULAR -->
-        <section class="search-wrapper">
+        <!-- 4. SEARCH BAR -->
+        <section class="layout-block search-wrapper" id="block-search" data-block-id="search">
+            <div class="block-drag-handle">Search Bar</div>
             <div class="search-bar">
-                <img src="https://assets.codepen.io/1468070/Google+G+Icon.png" alt="Google">
+                <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                    <path fill="none" d="M0 0h48v48H0z"/>
+                </svg>
                 <input type="text" placeholder="Search anything..." id="search" autocomplete="off">
             </div>
             <button class="search-action-btn" onclick="googleSearch()" title="Search">
@@ -504,112 +1615,967 @@
             <button class="search-action-btn" id="mic-button" title="Voice Search">
                 <i class="fas fa-microphone"></i>
             </button>
+            <div class="block-resize-handle"></div>
         </section>
 
-        <!-- Shortcuts Header -->
-        <div class="section-header">
-            <div class="section-label">Quick Access</div>
-            <button class="add-shortcut-btn" onclick="openShortcutModal()">
-                <i class="fas fa-plus"></i> Add Shortcut
-            </button>
-        </div>
+        <!-- 5. BOTTOM CIRCULAR SHORTCUTS -->
+        <section class="layout-block" id="block-shortcuts" data-block-id="shortcuts">
+            <div class="block-drag-handle">Circular Shortcuts</div>
+            <div class="section-header">
+                <div class="section-label">Quick Access</div>
+            </div>
+            <div class="apps-grid" id="apps-container"></div>
+            <div class="block-resize-handle"></div>
+        </section>
 
-        <!-- Apps Grid - 4 columns -->
-        <section class="apps-grid" id="apps-container">
-            <a href="https://stackoverflow.com" class="app-link" data-id="stackoverflow">
-                <i class="fa-brands fa-stack-overflow" style="color:#f48024;"></i>
-                <div class="app-info"><span class="app-name">Stack Overflow</span><span class="app-url">stackoverflow.com</span></div>
-                <button class="delete-shortcut" onclick="deleteBuiltin(event,'stackoverflow')"><i class="fas fa-times"></i></button>
-            </a>
-            <a href="https://github.com" class="app-link" data-id="github">
-                <i class="fa-brands fa-github" style="color:#fff;"></i>
-                <div class="app-info"><span class="app-name">GitHub</span><span class="app-url">github.com</span></div>
-                <button class="delete-shortcut" onclick="deleteBuiltin(event,'github')"><i class="fas fa-times"></i></button>
-            </a>
-            <a href="https://chat.openai.com" class="app-link" data-id="chatgpt">
-                <svg width="22" height="22" viewBox="0 0 41 41" fill="white" style="flex-shrink:0;width:1.8rem"><path d="M37.5324 16.8707C37.9808 15.5241 38.1363 14.0974 37.9886 12.6859C37.8409 11.2744 37.3934 9.91076 36.676 8.68622C35.6126 6.83404 33.9882 5.3676 32.0373 4.4985C30.0864 3.62941 27.9098 3.40259 25.8215 3.85078C24.8796 2.7893 23.7219 1.94125 22.4257 1.36341C21.1295 0.785575 19.7249 0.491269 18.3058 0.500197C16.1708 0.495044 14.0893 1.16803 12.3614 2.42214C10.6335 3.67624 9.34853 5.44666 8.6917 7.47815C7.30085 7.76286 5.98686 8.3414 4.8377 9.17505C3.68854 10.0087 2.73073 11.0782 2.02839 12.312C0.956464 14.1591 0.498905 16.2988 0.721698 18.4228C0.944492 20.5467 1.83612 22.5449 3.268 24.1293C2.81966 25.4759 2.66413 26.9026 2.81182 28.3141C2.95951 29.7256 3.40701 31.0892 4.12437 32.3138C5.18791 34.1659 6.8123 35.6322 8.76321 36.5013C10.7141 37.3704 12.8907 37.5973 14.9789 37.1492C15.9208 38.2107 17.0786 39.0587 18.3747 39.6366C19.6709 40.2144 21.0755 40.5087 22.4946 40.4998C24.6307 40.5054 26.7133 39.8321 28.4418 38.5772C30.1704 37.3223 31.4556 35.5506 32.1119 33.5179C33.5027 33.2332 34.8167 32.6547 35.9659 31.821C37.115 30.9874 38.0728 29.9178 38.7752 28.684C39.8458 26.8371 40.3023 24.6979 40.0789 22.5748C39.8556 20.4517 38.9639 18.4544 37.5324 16.8707Z"/></svg>
-                <div class="app-info"><span class="app-name">Chat GPT</span><span class="app-url">chat.openai.com</span></div>
-                <button class="delete-shortcut" onclick="deleteBuiltin(event,'chatgpt')"><i class="fas fa-times"></i></button>
-            </a>
-            <a href="https://codepen.io" class="app-link" data-id="codepen">
-                <i class="fa-brands fa-codepen" style="color:#fff;"></i>
-                <div class="app-info"><span class="app-name">CodePen</span><span class="app-url">codepen.io</span></div>
-                <button class="delete-shortcut" onclick="deleteBuiltin(event,'codepen')"><i class="fas fa-times"></i></button>
-            </a>
-            <a href="https://youtube.com" class="app-link" data-id="youtube">
-                <i class="fa-brands fa-youtube" style="color:#ff0000;"></i>
-                <div class="app-info"><span class="app-name">YouTube</span><span class="app-url">youtube.com</span></div>
-                <button class="delete-shortcut" onclick="deleteBuiltin(event,'youtube')"><i class="fas fa-times"></i></button>
-            </a>
-            <a href="https://spotify.com" class="app-link" data-id="spotify">
-                <i class="fa-brands fa-spotify" style="color:#1ed760;"></i>
-                <div class="app-info"><span class="app-name">Spotify</span><span class="app-url">spotify.com</span></div>
-                <button class="delete-shortcut" onclick="deleteBuiltin(event,'spotify')"><i class="fas fa-times"></i></button>
-            </a>
-            <a href="https://netflix.com" class="app-link" data-id="netflix">
-                <i class="fa-brands fa-youtube" style="color:#e50914;"></i>
-                <div class="app-info"><span class="app-name">Netflix</span><span class="app-url">netflix.com</span></div>
-                <button class="delete-shortcut" onclick="deleteBuiltin(event,'netflix')"><i class="fas fa-times"></i></button>
-            </a>
-            <a href="https://xbox.com" class="app-link" data-id="xbox">
-                <i class="fa-brands fa-xbox" style="color:#107c10;"></i>
-                <div class="app-info"><span class="app-name">Xbox</span><span class="app-url">xbox.com</span></div>
-                <button class="delete-shortcut" onclick="deleteBuiltin(event,'xbox')"><i class="fas fa-times"></i></button>
-            </a>
+        <!-- 6. GOOGLE APPS COLUMN -->
+        <section class="layout-block" id="block-google-apps" data-block-id="google-apps">
+            <div class="block-drag-handle">Google Apps</div>
+            <div class="sidebar-col-block">
+                <div class="sidebar-col-header">
+                    <div class="sidebar-col-title"><i class="fab fa-google" style="color:#4285F4;"></i> Google Apps</div>
+                    <button class="sidebar-col-edit-btn" onclick="openSidebarEditModal('google')"><i class="fas fa-cog"></i> Edit</button>
+                </div>
+                <div id="google-apps-container"></div>
+            </div>
+            <div class="block-resize-handle"></div>
+        </section>
+
+        <!-- 7. AI TOOLS COLUMN -->
+        <section class="layout-block" id="block-ai-tools" data-block-id="ai-tools">
+            <div class="block-drag-handle">AI Tools</div>
+            <div class="sidebar-col-block">
+                <div class="sidebar-col-header">
+                    <div class="sidebar-col-title"><i class="fas fa-robot" style="color:#a78bfa;"></i> AI Tools</div>
+                    <button class="sidebar-col-edit-btn" onclick="openSidebarEditModal('ai')"><i class="fas fa-cog"></i> Edit</button>
+                </div>
+                <div id="ai-tools-container"></div>
+            </div>
+            <div class="block-resize-handle"></div>
         </section>
 
     </main>
+
+    <!-- FOCUS LAYOUT CONTAINER -->
+    <div class="focus-container" id="focus-container">
+        <div class="focus-header">
+            <div class="focus-title"><i class="fas fa-bullseye"></i> Focus Layout</div>
+            <button class="focus-exit-btn" onclick="setLayoutPreset('classic')" title="Exit Focus Mode">
+                <i class="fas fa-compress-arrows-alt"></i> Exit Focus
+            </button>
+        </div>
+
+        <!-- 1. TIME DISPLAY -->
+        <div class="focus-time-wrapper">
+            <div class="focus-clock-display" id="focusClock">12:00:00 AM</div>
+            <div class="focus-date-display" id="focusDate">Monday, January 1</div>
+        </div>
+
+        <!-- 2. STOPWATCH & COUNTDOWN TIMER TOOL CARD -->
+        <div class="focus-tool-card">
+            <div class="focus-tool-tabs">
+                <button class="focus-tool-tab active" id="tabStopwatchBtn" onclick="switchFocusTool('stopwatch')">
+                    <i class="fas fa-stopwatch"></i> Stopwatch
+                </button>
+                <button class="focus-tool-tab" id="tabTimerBtn" onclick="switchFocusTool('timer')">
+                    <i class="fas fa-hourglass-half"></i> Countdown Timer
+                </button>
+            </div>
+
+            <!-- STOPWATCH PANE -->
+            <div class="focus-tool-pane" id="stopwatchPane">
+                <div class="stopwatch-display" id="stopwatchDisplay">00:00<span class="stopwatch-ms">.00</span></div>
+                <div class="stopwatch-controls">
+                    <button class="stopwatch-btn btn-start" id="swStartBtn" onclick="toggleStopwatch()">
+                        <i class="fas fa-play" id="swStartIcon"></i> <span id="swStartTxt">Start</span>
+                    </button>
+                    <button class="stopwatch-btn btn-lap" id="swLapBtn" onclick="lapStopwatch()" disabled>
+                        <i class="fas fa-flag"></i> Lap
+                    </button>
+                    <button class="stopwatch-btn btn-reset" id="swResetBtn" onclick="resetStopwatch()">
+                        <i class="fas fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+                <div class="stopwatch-laps" id="swLapsContainer"></div>
+            </div>
+
+            <!-- TIMER PANE -->
+            <div class="focus-tool-pane" id="timerPane" style="display:none;">
+                <div class="timer-presets">
+                    <button class="timer-preset-btn" onclick="setTimerTime(300)">+5m</button>
+                    <button class="timer-preset-btn" onclick="setTimerTime(600)">+10m</button>
+                    <button class="timer-preset-btn" onclick="setTimerTime(900)">+15m</button>
+                    <button class="timer-preset-btn" onclick="setTimerTime(1500)">25m (Pomodoro)</button>
+                    <button class="timer-preset-btn" onclick="setTimerTime(1800)">+30m</button>
+                    <button class="timer-preset-btn" onclick="setTimerTime(3600)">+1h</button>
+                </div>
+                <div class="timer-display" id="timerDisplay">25:00</div>
+                <div class="timer-inputs">
+                    <div class="timer-input-group">
+                        <input type="number" id="timerHours" min="0" max="99" value="0" placeholder="00" oninput="updateTimerFromInputs()">
+                        <span>h</span>
+                    </div>
+                    <div class="timer-input-group">
+                        <input type="number" id="timerMinutes" min="0" max="59" value="25" placeholder="00" oninput="updateTimerFromInputs()">
+                        <span>m</span>
+                    </div>
+                    <div class="timer-input-group">
+                        <input type="number" id="timerSeconds" min="0" max="59" value="0" placeholder="00" oninput="updateTimerFromInputs()">
+                        <span>s</span>
+                    </div>
+                </div>
+                <div class="stopwatch-controls">
+                    <button class="stopwatch-btn btn-start" id="tmStartBtn" onclick="toggleTimer()">
+                        <i class="fas fa-play" id="tmStartIcon"></i> <span id="tmStartTxt">Start Timer</span>
+                    </button>
+                    <button class="stopwatch-btn btn-reset" id="tmResetBtn" onclick="resetTimer()">
+                        <i class="fas fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 2 SHORTCUTS -->
+        <div class="focus-shortcuts-section">
+            <div class="focus-shortcuts-header">
+                <span><i class="fas fa-bolt"></i> Focus Shortcuts</span>
+                <button class="focus-shortcuts-edit-btn" onclick="openFocusShortcutsModal()" title="Configure Focus Shortcuts">
+                    <i class="fas fa-cog"></i> Edit Shortcuts
+                </button>
+            </div>
+            <div class="focus-shortcuts-grid" id="focusShortcutsGrid"></div>
+        </div>
+    </div>
 </div>
 
 <script>
-/* ======= STATE ======= */
+/* ==========================================================================
+   DEFAULT STATE & DATA
+   ========================================================================== */
 let clockFormat = parseInt(localStorage.getItem('clockFormat') || '12');
-let customShortcuts = [];
-try { customShortcuts = JSON.parse(localStorage.getItem('customShortcuts') || '[]'); } catch(e){}
+let currentLayout = localStorage.getItem('currentLayout') || 'classic';
+let activeManageTab = 'bottom';
+let editingItemId = null;
 
-const iconColors = {
-    'fa-globe':'#00d8ff','fa-code':'#a78bfa','fa-link':'#34d399','fa-star':'#fbbf24',
-    'fa-bookmark':'#f87171','fa-briefcase':'#60a5fa','fa-music':'#f472b6',
-    'fa-gamepad':'#4ade80','fa-newspaper':'#fb923c','fa-shopping-cart':'#a3e635',
-    'fa-paint-brush':'#f97316','fa-video':'#e879f9','fa-cloud':'#67e8f9','fa-database':'#86efac'
+// Pre-embedded SVG Data URLs for default shortcuts (100% Offline Compatible)
+const SVG_ICONS = {
+    google: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="%23EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="%234285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="%23FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="%2334A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>',
+    stackoverflow: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><path fill="%23BCBBBB" d="M84.4 93.8H19.7V57.3H12v44.2h80.1V57.3h-7.7v36.5z"/><path fill="%23F48024" d="M27.5 75.6h49.2v-7.7H27.5v7.7zm3.1-20.7l47.6 12.3 1.9-7.5-47.6-12.3-1.9 7.5zm7.8-20.2l42.6 24.8 3.9-6.7-42.6-24.8-3.9 6.7zm14.3-17.7l32.9 36.6 5.7-5.1-32.9-36.6-5.7 5.1zM72 5.5l-6.8 3.8 20.6 36.8 6.8-3.8L72 5.5z"/></svg>',
+    github: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><path fill="%23ffffff" fill-rule="evenodd" clip-rule="evenodd" d="M48 0C21.49 0 0 21.49 0 48c0 21.21 13.75 39.2 32.83 45.55 2.4.44 3.28-1.04 3.28-2.31 0-1.14-.04-4.16-.07-8.17-13.35 2.9-16.17-6.44-16.17-6.44-2.18-5.55-5.33-7.03-5.33-7.03-4.36-2.98.33-2.92.33-2.92 4.82.34 7.36 4.95 7.36 4.95 4.28 7.34 11.23 5.22 13.97 3.99.43-3.1 1.67-5.22 3.04-6.42-10.66-1.21-21.86-5.33-21.86-23.72 0-5.24 1.87-9.53 4.94-12.89-.49-1.21-2.14-6.1 0.47-12.71 0 0 4.03-1.29 13.2 4.92 3.83-1.06 7.94-1.6 12.02-1.62 4.08.02 8.19.56 12.03 1.62 9.16-6.21 13.18-4.92 13.18-4.92 2.62 6.61.97 11.5.48 12.71 3.08 3.36 4.93 7.65 4.93 12.89 0 18.44-11.22 22.49-21.92 23.68 1.73 1.49 3.27 4.43 3.27 8.93 0 6.45-.06 11.66-.06 13.25 0 1.28.86 2.78 3.29 2.3C82.26 87.18 96 69.2 96 48 96 21.49 74.51 0 48 0z"/></svg>',
+    chatgpt: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="%2310a37f"/><path fill="%23ffffff" d="M72 45.5c-.7-5.1-4.1-9.3-9-10.8 1.4-4.8.1-10-3.5-13.4-4.7-4.4-11.8-4.7-16.9-.7-3.8-3.4-9.3-4.2-13.8-2-4.6 2.3-7.4 7-7.1 12.2-4.9 1.5-8.3 5.7-9 10.8-.7 5.1 1.4 10.1 5.4 13.1-1.4 4.8-.1 10 3.5 13.4 4.7 4.4 11.8 4.7 16.9.7 3.8 3.4 9.3 4.2 13.8 2 4.6-2.3 7.4-7 7.1-12.2 4.9-1.5 8.3-5.7 9-10.8.7-5.1-1.4-10.1-5.4-13.1z"/></svg>',
+    codepen: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="none" stroke="%23ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" d="M50 15L85 38v24L50 85L15 62V38L50 15z M50 15v23 M85 38L50 61 M15 38l35 23 M85 62L50 38 M15 62l35-24 M50 61v24"/></svg>',
+    youtube: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="80" height="56" x="10" y="22" rx="14" fill="%23ff0000"/><path fill="%23ffffff" d="M40 35l28 15-28 15V35z"/></svg>',
+    spotify: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="%231db954"/><path fill="%23ffffff" d="M68 66.5c-1 0-1.8-.4-2.4-1-8.5-5.2-19.2-6.4-31.8-3.5-1.4.3-2.8-.6-3.1-2-.3-1.4.6-2.8 2-3.1 14-3.2 26-1.8 35.7 4.1.8.5 1.5 1.5 1.5 2.5 0 1.7-1.3 3-1.9 3zM73 54.5c-1.1 0-2.1-.6-2.7-1.4-9.7-6-24.5-7.7-36-4.2-1.6.5-3.3-.4-3.8-2-.5-1.6.4-3.3 2-3.8 13-3.9 29.3-2 40.5 4.9 1.4.8 1.8 2.6 1 4-.4 1.5-1.8 2.5-3 2.5zM73.5 41.5c-1.3 0-2.5-.7-3.2-1.7-11-6.5-29.2-7.1-39.7-3.9-1.9.6-4-.5-4.6-2.4-.6-1.9.5-4 2.4-4.6 12.3-3.7 32.3-3 44.9 4.5 1.7 1 2.2 3.2 1.2 4.9-.6 1.9-2.2 3.2-4 3.2z"/></svg>',
+    netflix: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%23000000"/><path fill="%23E50914" d="M32 20h12v60H32zM56 20h12v60H56z"/><path fill="%23B81D24" d="M32 20l36 60H56L32 20z"/></svg>',
+    xbox: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="%23107c41"/><path fill="%23ffffff" d="M26 30c6 5 15 13 24 23 9-10 18-18 24-23-6-6-14-10-24-10s-18 4-24 10zm-6 40c4 7 11 13 19 16-3-9-5-18-5-27-5 4-10 7-14 11zm60 0c4-4 9-7 14-11 0 9-2 18-5 27 8-3 15-9 19-16zM50 59c-6-7-12-13-17-18 10 1 17 6 17 6s7-5 17-6c-5 5-11 11-17 18z"/></svg>'
 };
 
-/* ======= CLOCK ======= */
+// Default Bottom Circular Shortcuts
+const DEFAULT_BOTTOM_SHORTCUTS = [
+    { id: 'sc_google', name: 'Google', url: 'https://google.com', iconType: 'custom', icon: SVG_ICONS.google, cachedIcon: SVG_ICONS.google, visible: true },
+    { id: 'sc_stackoverflow', name: 'Stack Overflow', url: 'https://stackoverflow.com', iconType: 'custom', icon: SVG_ICONS.stackoverflow, cachedIcon: SVG_ICONS.stackoverflow, visible: true },
+    { id: 'sc_github', name: 'GitHub', url: 'https://github.com', iconType: 'custom', icon: SVG_ICONS.github, cachedIcon: SVG_ICONS.github, visible: true },
+    { id: 'sc_chatgpt', name: 'ChatGPT', url: 'https://chatgpt.com', iconType: 'custom', icon: SVG_ICONS.chatgpt, cachedIcon: SVG_ICONS.chatgpt, visible: true },
+    { id: 'sc_codepen', name: 'CodePen', url: 'https://codepen.io', iconType: 'custom', icon: SVG_ICONS.codepen, cachedIcon: SVG_ICONS.codepen, visible: true },
+    { id: 'sc_youtube', name: 'YouTube', url: 'https://youtube.com', iconType: 'custom', icon: SVG_ICONS.youtube, cachedIcon: SVG_ICONS.youtube, visible: true },
+    { id: 'sc_spotify', name: 'Spotify', url: 'https://spotify.com', iconType: 'custom', icon: SVG_ICONS.spotify, cachedIcon: SVG_ICONS.spotify, visible: true },
+    { id: 'sc_netflix', name: 'Netflix', url: 'https://netflix.com', iconType: 'custom', icon: SVG_ICONS.netflix, cachedIcon: SVG_ICONS.netflix, visible: true },
+    { id: 'sc_xbox', name: 'Xbox', url: 'https://xbox.com', iconType: 'custom', icon: SVG_ICONS.xbox, cachedIcon: SVG_ICONS.xbox, visible: true }
+];
+
+// Default Top Navigation Links
+const DEFAULT_NAV_LINKS = [
+    { id: 'nav_gmail', name: 'Gmail', url: 'https://gmail.com', icon: 'fa-envelope', visible: true },
+    { id: 'nav_unsplash', name: 'Unsplash', url: 'https://unsplash.com', icon: 'fa-camera', visible: true },
+    { id: 'nav_mysite', name: 'My Site', url: 'http://www.devrahul.in', icon: 'fa-globe', visible: true },
+    { id: 'nav_about', name: 'About', url: 'https://beacons.ai/developerrahul', icon: 'fa-info-circle', visible: true }
+];
+
+// Default Hero Social Links
+const DEFAULT_SOCIAL_LINKS = [
+    { id: 'soc_insta', name: 'Instagram', url: 'https://www.instagram.com', icon: 'fab fa-instagram', brandClass: 'social-button--instagram', visible: true },
+    { id: 'soc_yt', name: 'YouTube', url: 'https://www.youtube.com', icon: 'fab fa-youtube', brandClass: 'social-button--youtube', visible: true },
+    { id: 'soc_x', name: 'X', url: 'https://x.com', icon: 'x-logo', brandClass: 'social-button--x', visible: true },
+    { id: 'soc_in', name: 'LinkedIn', url: 'https://www.linkedin.com', icon: 'fab fa-linkedin-in', brandClass: 'social-button--linkedin', visible: true },
+    { id: 'soc_tg', name: 'Telegram', url: 'https://t.me', icon: 'fab fa-telegram-plane', brandClass: 'social-button--telegram', visible: true },
+    { id: 'soc_gh', name: 'GitHub', url: 'https://github.com', icon: 'fab fa-github', brandClass: 'social-button--github', visible: true },
+    { id: 'soc_cp', name: 'CodePen', url: 'https://codepen.io', icon: 'fab fa-codepen', brandClass: 'social-button--codepen', visible: true }
+];
+
+let bottomShortcuts = [];
+let topNavLinks = [];
+let topSocialLinks = [];
+
+function initShortcutsState() {
+    try {
+        const bs = localStorage.getItem('bottomShortcuts');
+        bottomShortcuts = bs ? JSON.parse(bs) : JSON.parse(JSON.stringify(DEFAULT_BOTTOM_SHORTCUTS));
+    } catch(e) { bottomShortcuts = JSON.parse(JSON.stringify(DEFAULT_BOTTOM_SHORTCUTS)); }
+
+    try {
+        const tnl = localStorage.getItem('topNavLinks');
+        topNavLinks = tnl ? JSON.parse(tnl) : JSON.parse(JSON.stringify(DEFAULT_NAV_LINKS));
+    } catch(e) { topNavLinks = JSON.parse(JSON.stringify(DEFAULT_NAV_LINKS)); }
+
+    try {
+        const tsl = localStorage.getItem('topSocialLinks');
+        topSocialLinks = tsl ? JSON.parse(tsl) : JSON.parse(JSON.stringify(DEFAULT_SOCIAL_LINKS));
+        let changed = false;
+        topSocialLinks = topSocialLinks.map(item => {
+            if (item.id === 'soc_fb' || (item.name && item.name.toLowerCase().includes('facebook'))) {
+                changed = true;
+                return { id: 'soc_x', name: 'X', url: 'https://x.com', icon: 'x-logo', brandClass: 'social-button--x', visible: true };
+            }
+            if (item.id === 'soc_snap' || (item.name && item.name.toLowerCase().includes('snapchat'))) {
+                changed = true;
+                return { id: 'soc_tg', name: 'Telegram', url: 'https://t.me', icon: 'fab fa-telegram-plane', brandClass: 'social-button--telegram', visible: true };
+            }
+            // Migrate old Twitter/X entry to new X format
+            if (item.id === 'soc_tw' || item.id === 'soc_x' && item.icon !== 'x-logo') {
+                changed = true;
+                return { id: 'soc_x', name: 'X', url: 'https://x.com', icon: 'x-logo', brandClass: 'social-button--x', visible: item.visible !== false };
+            }
+            return item;
+        });
+        if (changed) {
+            localStorage.setItem('topSocialLinks', JSON.stringify(topSocialLinks));
+        }
+    } catch(e) { topSocialLinks = JSON.parse(JSON.stringify(DEFAULT_SOCIAL_LINKS)); }
+}
+initShortcutsState();
+
+/* ==========================================================================
+   OFFLINE ICON GENERATOR & LOCAL STORAGE CACHING
+   ========================================================================== */
+function generateDomainSvg(name, url) {
+    let text = (name || '').trim();
+    if (!text && url) {
+        try { text = url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, '').split('/')[0]; } catch(e){}
+    }
+    const letter = (text || 'L').charAt(0).toUpperCase();
+    const bgColors = ['#00d8ff', '#ff4757', '#2ed573', '#ffa502', '#1e90ff', '#9b59b6', '#e17055', '#00cec9'];
+    let charCode = 0;
+    for (let i = 0; i < text.length; i++) charCode += text.charCodeAt(i);
+    const color = bgColors[charCode % bgColors.length];
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><circle cx="64" cy="64" r="64" fill="${color}"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="'Outfit', system-ui, sans-serif" font-size="64" font-weight="700" fill="%23ffffff">${letter}</text></svg>`;
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function getFaviconUrl(url) {
+    try {
+        let domain = url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, '').split('/')[0].split('?')[0];
+        if (!domain) return '';
+        return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`;
+    } catch(e) { return ''; }
+}
+
+function autoCacheIconsToLocalStorage() {
+    let updated = false;
+
+    bottomShortcuts.forEach(item => {
+        if (!item.cachedIcon) {
+            if (item.iconType === 'fa' && item.icon) return;
+            item.cachedIcon = generateDomainSvg(item.name, item.url);
+            updated = true;
+
+            if (navigator.onLine) {
+                const targetUrl = (item.iconType === 'custom' && item.icon) ? item.icon : getFaviconUrl(item.url);
+                if (targetUrl && targetUrl.startsWith('http')) {
+                    convertImageUrlToBase64(targetUrl, (base64) => {
+                        if (base64) {
+                            item.cachedIcon = base64;
+                            localStorage.setItem('bottomShortcuts', JSON.stringify(bottomShortcuts));
+                            renderBottomShortcuts();
+                        }
+                    });
+                }
+            }
+        }
+    });
+
+    if (updated) {
+        localStorage.setItem('bottomShortcuts', JSON.stringify(bottomShortcuts));
+    }
+}
+
+function convertImageUrlToBase64(url, callback) {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = function() {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width || 64;
+            canvas.height = img.height || 64;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/png');
+            callback(dataUrl);
+        } catch(e) { callback(null); }
+    };
+    img.onerror = function() { callback(null); };
+    img.src = url;
+}
+
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ==========================================================================
+   RENDER SHORTCUTS & LINKS
+   ========================================================================== */
+function renderAllComponents() {
+    renderBottomShortcuts();
+    renderTopNavLinks();
+    renderTopSocialLinks();
+    renderGoogleApps();
+    renderAiTools();
+}
+
+function renderBottomShortcuts() {
+    const container = document.getElementById('apps-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    bottomShortcuts.forEach((item) => {
+        if (item.visible === false) return;
+        const href = item.url.startsWith('http') ? item.url : `https://${item.url}`;
+        const a = document.createElement('a');
+        a.href = href;
+        a.className = 'app-circle';
+        a.title = item.name;
+
+        let iconMarkup = '';
+        const fallbackSvg = generateDomainSvg(item.name, item.url);
+
+        if (item.iconType === 'fa' && item.icon) {
+            iconMarkup = `<i class="${escH(item.icon)} shortcut-icon-fa" style="color:var(--accent-blue);"></i>`;
+        } else {
+            const iconSrc = item.cachedIcon || (item.iconType === 'custom' && item.icon ? item.icon : getFaviconUrl(item.url)) || fallbackSvg;
+            iconMarkup = `<img src="${escH(iconSrc)}" class="shortcut-icon-img" alt="${escH(item.name)}" onerror="this.onerror=null;this.src='${escH(fallbackSvg)}';">`;
+        }
+
+        a.innerHTML = `
+            ${iconMarkup}
+            <span class="shortcut-tooltip">${escH(item.name)}</span>
+        `;
+        container.appendChild(a);
+    });
+}
+
+function renderTopNavLinks() {
+    const container = document.getElementById('nav-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    topNavLinks.forEach(item => {
+        if (item.visible === false) return;
+        const href = item.url.startsWith('http') ? item.url : `https://${item.url}`;
+        const a = document.createElement('a');
+        a.href = href;
+        a.innerHTML = `<i class="fas ${escH(item.icon || 'fa-link')}"></i> ${escH(item.name)}`;
+        container.appendChild(a);
+    });
+}
+
+function renderTopSocialLinks() {
+    const container = document.getElementById('social-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Inline X (formerly Twitter) SVG logo
+    const X_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.261 5.635L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+
+    topSocialLinks.forEach(item => {
+        if (item.visible === false) return;
+        const href = item.url.startsWith('http') ? item.url : (item.url === '#' ? '#' : `https://${item.url}`);
+        const a = document.createElement('a');
+        a.href = href;
+        a.className = `social-button ${escH(item.brandClass || '')}`;
+        a.title = item.name;
+        let iconHtml;
+        if (item.icon === 'x-logo') {
+            iconHtml = X_SVG;
+        } else {
+            iconHtml = `<i class="${escH(item.icon || 'fas fa-share-alt')}"></i>`;
+        }
+        a.innerHTML = `${iconHtml}<span class="shortcut-tooltip">${escH(item.name)}</span>`;
+        container.appendChild(a);
+    });
+}
+
+/* ==========================================================================
+   SHORTCUT SIZE CONTROLLER
+   ========================================================================== */
+function setShortcutSize(val) {
+    const num = parseInt(val);
+    document.documentElement.style.setProperty('--shortcut-size', num + 'px');
+    const label = document.getElementById('shortcutSizeVal');
+    if (label) label.textContent = num + 'px';
+    const range = document.getElementById('shortcutSizeRange');
+    if (range) range.value = num;
+    localStorage.setItem('shortcutSize', num);
+}
+
+function loadShortcutSize() {
+    const size = localStorage.getItem('shortcutSize') || '58';
+    setShortcutSize(size);
+}
+
+/* ==========================================================================
+   MANAGE SHORTCUTS MODAL LOGIC
+   ========================================================================== */
+function openManageShortcutsModal() {
+    document.getElementById('settingsOverlay').classList.remove('open');
+    document.getElementById('manageShortcutsModal').classList.add('open');
+    updateManageCounts();
+    renderManageList();
+}
+
+function closeManageShortcutsModal() {
+    document.getElementById('manageShortcutsModal').classList.remove('open');
+}
+
+function updateManageCounts() {
+    const bCount = document.getElementById('bottomCount');
+    if (bCount) bCount.textContent = bottomShortcuts.length;
+    const nCount = document.getElementById('navCount');
+    if (nCount) nCount.textContent = topNavLinks.length;
+    const sCount = document.getElementById('socialCount');
+    if (sCount) sCount.textContent = topSocialLinks.length;
+}
+
+function switchManageTab(tab) {
+    activeManageTab = tab;
+    document.getElementById('tabBottomBtn').classList.toggle('active', tab === 'bottom');
+    document.getElementById('tabNavBtn').classList.toggle('active', tab === 'nav');
+    document.getElementById('tabSocialBtn').classList.toggle('active', tab === 'social');
+    renderManageList();
+}
+
+function renderManageList() {
+    const listEl = document.getElementById('manageShortcutsList');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    let items = [];
+    if (activeManageTab === 'bottom') items = bottomShortcuts;
+    else if (activeManageTab === 'nav') items = topNavLinks;
+    else if (activeManageTab === 'social') items = topSocialLinks;
+
+    if (items.length === 0) {
+        listEl.innerHTML = `<div style="text-align:center; padding:2rem; color:rgba(255,255,255,0.4);">No shortcuts added in this section yet.</div>`;
+        return;
+    }
+
+    items.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'shortcut-item-row';
+
+        let iconDisplay = '';
+        if (activeManageTab === 'bottom') {
+            if (item.iconType === 'custom' && item.icon) {
+                iconDisplay = `<img src="${escH(item.icon)}" onerror="this.outerHTML='<i class=\'fas fa-globe\'></i>'">`;
+            } else if (item.iconType === 'fa' && item.icon) {
+                iconDisplay = `<i class="${escH(item.icon)}"></i>`;
+            } else {
+                iconDisplay = `<img src="${escH(getFaviconUrl(item.url))}" onerror="this.outerHTML='<i class=\'fas fa-globe\'></i>'">`;
+            }
+        } else {
+            iconDisplay = `<i class="${escH(item.icon || 'fas fa-link')}"></i>`;
+        }
+
+        row.innerHTML = `
+            <div class="shortcut-item-info">
+                <div class="shortcut-item-icon">${iconDisplay}</div>
+                <div class="shortcut-item-texts">
+                    <span class="shortcut-item-name">${escH(item.name)}</span>
+                    <span class="shortcut-item-url">${escH(item.url)}</span>
+                </div>
+            </div>
+            <div class="shortcut-item-actions">
+                <button class="item-action-btn" onclick="toggleShortcutVisibility('${activeManageTab}', ${idx})" title="${item.visible === false ? 'Show' : 'Hide'}">
+                    <i class="fas ${item.visible === false ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                </button>
+                <button class="item-action-btn" onclick="openEditShortcutDialog('${activeManageTab}', ${idx})" title="Edit">
+                    <i class="fas fa-pen"></i>
+                </button>
+                <button class="item-action-btn delete" onclick="deleteShortcutItem('${activeManageTab}', ${idx})" title="Delete">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
+        listEl.appendChild(row);
+    });
+}
+
+function toggleShortcutVisibility(category, idx) {
+    let list = getCategoryList(category);
+    if (list[idx]) {
+        list[idx].visible = list[idx].visible === false ? true : false;
+        saveCategoryList(category, list);
+        renderManageList();
+        renderAllComponents();
+        showToast(list[idx].visible ? 'Shortcut visible.' : 'Shortcut hidden.');
+    }
+}
+
+function deleteShortcutItem(category, idx) {
+    let list = getCategoryList(category);
+    if (confirm(`Delete shortcut "${list[idx].name}"?`)) {
+        list.splice(idx, 1);
+        saveCategoryList(category, list);
+        updateManageCounts();
+        renderManageList();
+        renderAllComponents();
+        showToast('Shortcut removed.');
+    }
+}
+
+function getCategoryList(cat) {
+    if (cat === 'bottom') return bottomShortcuts;
+    if (cat === 'nav') return topNavLinks;
+    return topSocialLinks;
+}
+
+function saveCategoryList(cat, list) {
+    if (cat === 'bottom') {
+        bottomShortcuts = list;
+        localStorage.setItem('bottomShortcuts', JSON.stringify(bottomShortcuts));
+    } else if (cat === 'nav') {
+        topNavLinks = list;
+        localStorage.setItem('topNavLinks', JSON.stringify(topNavLinks));
+    } else {
+        topSocialLinks = list;
+        localStorage.setItem('topSocialLinks', JSON.stringify(topSocialLinks));
+    }
+}
+
+/* ==========================================================================
+   ADD & EDIT SHORTCUT DIALOG LOGIC
+   ========================================================================= */
+function openAddShortcutDialog(defaultCat) {
+    editingItemId = null;
+    document.getElementById('editShortcutModalTitle').textContent = '➕ Add Shortcut';
+    document.getElementById('editShortcutCategory').value = defaultCat || activeManageTab;
+    document.getElementById('editShortcutName').value = '';
+    document.getElementById('editShortcutUrl').value = '';
+    document.getElementById('editShortcutIconType').value = 'auto';
+    document.getElementById('editShortcutCustomIcon').value = '';
+    onIconTypeChange();
+    updateIconPreview();
+    document.getElementById('editShortcutModal').classList.add('open');
+}
+
+function openEditShortcutDialog(category, idx) {
+    const list = getCategoryList(category);
+    const item = list[idx];
+    if (!item) return;
+
+    editingItemId = { category, idx };
+    document.getElementById('editShortcutModalTitle').textContent = '✏️ Edit Shortcut';
+    document.getElementById('editShortcutCategory').value = category;
+    document.getElementById('editShortcutName').value = item.name || '';
+    document.getElementById('editShortcutUrl').value = item.url || '';
+    document.getElementById('editShortcutIconType').value = item.iconType || (item.icon && item.icon.startsWith('http') ? 'custom' : (item.icon ? 'fa' : 'auto'));
+    document.getElementById('editShortcutCustomIcon').value = item.iconType === 'custom' ? item.icon : '';
+    if (item.icon && !item.icon.startsWith('http')) {
+        document.getElementById('editShortcutFaIcon').value = item.icon;
+    }
+    onIconTypeChange();
+    updateIconPreview();
+    document.getElementById('editShortcutModal').classList.add('open');
+}
+
+function closeEditShortcutDialog() {
+    document.getElementById('editShortcutModal').classList.remove('open');
+}
+
+function onIconTypeChange() {
+    const type = document.getElementById('editShortcutIconType').value;
+    document.getElementById('faSelectField').style.display = type === 'fa' ? 'flex' : 'none';
+    document.getElementById('customIconField').style.display = type === 'custom' ? 'flex' : 'none';
+    updateIconPreview();
+}
+
+function onUrlInputPreview(url) {
+    if (!document.getElementById('editShortcutName').value.trim()) {
+        try {
+            let domain = url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, '').split('/')[0].split('.')[0];
+            if (domain) document.getElementById('editShortcutName').placeholder = domain.charAt(0).toUpperCase() + domain.slice(1);
+        } catch(e){}
+    }
+    updateIconPreview();
+}
+
+function updateIconPreview() {
+    const preview = document.getElementById('liveShortcutPreview');
+    if (!preview) return;
+    const type = document.getElementById('editShortcutIconType').value;
+    const url = document.getElementById('editShortcutUrl').value.trim();
+
+    if (type === 'custom') {
+        const customUrl = document.getElementById('editShortcutCustomIcon').value.trim();
+        if (customUrl) {
+            preview.innerHTML = `<img src="${escH(customUrl)}" style="width:28px;height:28px;border-radius:50%;object-fit:contain;" onerror="this.outerHTML='<i class=\'fas fa-image\'></i>'">`;
+            return;
+        }
+    } else if (type === 'fa') {
+        const fa = document.getElementById('editShortcutFaIcon').value;
+        preview.innerHTML = `<i class="${escH(fa)}" style="font-size:1.4rem;color:var(--accent-blue);"></i>`;
+        return;
+    }
+
+    // Auto Favicon
+    if (url) {
+        const fav = getFaviconUrl(url);
+        preview.innerHTML = `<img src="${escH(fav)}" style="width:28px;height:28px;border-radius:50%;object-fit:contain;" onerror="this.outerHTML='<i class=\'fas fa-globe\'></i>'">`;
+    } else {
+        preview.innerHTML = `<i class="fas fa-globe" style="font-size:1.4rem;color:var(--accent-blue);"></i>`;
+    }
+}
+
+function saveShortcutItem() {
+    const category = document.getElementById('editShortcutCategory').value;
+    let name = document.getElementById('editShortcutName').value.trim();
+    const url = document.getElementById('editShortcutUrl').value.trim();
+    const iconType = document.getElementById('editShortcutIconType').value;
+    let icon = '';
+
+    if (!url) {
+        showToast('Please enter a valid URL.', true);
+        return;
+    }
+    if (!name) {
+        let domain = url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, '').split('/')[0];
+        name = domain || 'Link';
+    }
+
+    if (iconType === 'fa') {
+        icon = document.getElementById('editShortcutFaIcon').value;
+    } else if (iconType === 'custom') {
+        icon = document.getElementById('editShortcutCustomIcon').value.trim();
+    }
+
+    const fallbackSvg = generateDomainSvg(name, url);
+    const cachedIcon = (iconType === 'custom' && icon) ? icon : (iconType === 'auto' ? fallbackSvg : '');
+
+    const newItem = {
+        id: editingItemId ? (getCategoryList(category)[editingItemId.idx]?.id || 'sc_' + Date.now()) : 'sc_' + Date.now(),
+        name,
+        url,
+        iconType,
+        icon,
+        cachedIcon: cachedIcon || fallbackSvg,
+        visible: true
+    };
+
+    let list = getCategoryList(category);
+    if (editingItemId && editingItemId.category === category) {
+        list[editingItemId.idx] = newItem;
+    } else {
+        list.push(newItem);
+    }
+
+    saveCategoryList(category, list);
+    updateManageCounts();
+    renderManageList();
+    renderAllComponents();
+    closeEditShortcutDialog();
+    showToast('Shortcut saved with offline icon support!');
+
+    if (category === 'bottom' && (iconType === 'auto' || (iconType === 'custom' && icon.startsWith('http')))) {
+        const targetUrl = iconType === 'custom' ? icon : getFaviconUrl(url);
+        convertImageUrlToBase64(targetUrl, (base64) => {
+            if (base64) {
+                newItem.cachedIcon = base64;
+                saveCategoryList(category, list);
+                renderAllComponents();
+            }
+        });
+    }
+}
+
+/* ==========================================================================
+   LAYOUT ENGINE & 5 PREBUILT PRESETS
+   ========================================================================== */
+function setLayoutPreset(presetName, silent = false) {
+    currentLayout = presetName;
+    const wrapper = document.getElementById('main-wrapper');
+    if (!wrapper) return;
+
+    wrapper.className = `layout-${presetName}`;
+    document.body.classList.toggle('layout-focus-active', presetName === 'focus');
+    document.querySelectorAll('.layout-preset-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.preset === presetName);
+    });
+
+    localStorage.setItem('currentLayout', presetName);
+    if (!silent) showToast(`Layout switched to "${presetName.toUpperCase()}"!`);
+}
+
+function loadLayoutSetting() {
+    const saved = localStorage.getItem('currentLayout') || 'classic';
+    setLayoutPreset(saved, true);
+    loadCustomPositions();
+    loadCustomSizes();
+}
+
+/* ==========================================================================
+   INTERACTIVE DRAG & RESIZE LAYOUT EDITOR
+   ========================================================================== */
+let isLayoutEditing = false;
+let draggedBlock = null;
+let isResizingBlock = false;
+
+function toggleLayoutEditor(enable) {
+    isLayoutEditing = enable;
+    document.body.classList.toggle('layout-editing', enable);
+    document.getElementById('layoutEditorBar').classList.toggle('active', enable);
+    if (enable) {
+        document.getElementById('settingsOverlay').classList.remove('open');
+        initBlockDragEvents();
+        initBlockResizeEvents();
+        showToast('Layout Editor active! Drag edges/corners to resize, or block handles to reorder.');
+    } else {
+        document.querySelectorAll('.layout-block').forEach(b => b.setAttribute('draggable', 'false'));
+    }
+}
+
+function injectResizeHandles() {
+    const blocks = document.querySelectorAll('.layout-block');
+    const dirs = ['n', 's', 'w', 'e', 'nw', 'ne', 'sw', 'se'];
+    blocks.forEach(block => {
+        block.querySelectorAll('.block-resize-handle').forEach(el => el.remove());
+        dirs.forEach(dir => {
+            const h = document.createElement('div');
+            h.className = `block-resize-handle resize-handle-${dir}`;
+            h.dataset.dir = dir;
+            block.appendChild(h);
+        });
+    });
+}
+
+function initBlockResizeEvents() {
+    injectResizeHandles();
+
+    document.querySelectorAll('.block-resize-handle').forEach(handle => {
+        handle.onmousedown = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isResizingBlock = true;
+
+            const block = handle.closest('.layout-block');
+            if (!block) return;
+
+            block.setAttribute('draggable', 'false');
+
+            const dir = handle.dataset.dir;
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startWidth = block.offsetWidth;
+            const startHeight = block.offsetHeight;
+
+            const onMouseMove = (moveEvent) => {
+                if (!isResizingBlock) return;
+                moveEvent.preventDefault();
+
+                const dx = moveEvent.clientX - startX;
+                const dy = moveEvent.clientY - startY;
+
+                // Horizontal resizing
+                if (dir.includes('e')) {
+                    const newW = Math.max(180, startWidth + dx);
+                    block.style.width = newW + 'px';
+                    block.style.maxWidth = '100%';
+                } else if (dir.includes('w')) {
+                    const newW = Math.max(180, startWidth - dx);
+                    block.style.width = newW + 'px';
+                    block.style.maxWidth = '100%';
+                }
+
+                // Vertical resizing
+                if (dir.includes('s')) {
+                    const newH = Math.max(40, startHeight + dy);
+                    block.style.minHeight = newH + 'px';
+                    block.style.height = newH + 'px';
+                } else if (dir.includes('n')) {
+                    const newH = Math.max(40, startHeight - dy);
+                    block.style.minHeight = newH + 'px';
+                    block.style.height = newH + 'px';
+                }
+            };
+
+            const onMouseUp = () => {
+                isResizingBlock = false;
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+                if (isLayoutEditing) {
+                    block.setAttribute('draggable', 'true');
+                }
+                saveCustomSizes();
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        };
+    });
+}
+
+function initBlockDragEvents() {
+    const blocks = document.querySelectorAll('.layout-block');
+    blocks.forEach(block => {
+        block.setAttribute('draggable', 'true');
+        block.ondragstart = (e) => {
+            if (!isLayoutEditing || isResizingBlock || e.target.classList.contains('block-resize-handle')) {
+                e.preventDefault();
+                return false;
+            }
+            draggedBlock = block;
+            block.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        };
+        block.ondragend = () => {
+            draggedBlock = null;
+            block.classList.remove('dragging');
+        };
+        block.ondragover = (e) => {
+            if (!isLayoutEditing || !draggedBlock || draggedBlock === block || isResizingBlock) return;
+            e.preventDefault();
+            const bounding = block.getBoundingClientRect();
+            const offset = bounding.y + (bounding.height / 2);
+            const parent = block.parentNode;
+            if (e.clientY - offset > 0) {
+                parent.insertBefore(draggedBlock, block.nextSibling);
+            } else {
+                parent.insertBefore(draggedBlock, block);
+            }
+        };
+    });
+}
+
+function saveCustomSizes() {
+    const sizes = {};
+    document.querySelectorAll('.layout-block').forEach(block => {
+        const id = block.dataset.blockId;
+        if (id) {
+            sizes[id] = {
+                width: block.style.width || '',
+                height: block.style.height || '',
+                minHeight: block.style.minHeight || ''
+            };
+        }
+    });
+    localStorage.setItem('customBlockSizes', JSON.stringify(sizes));
+}
+
+function loadCustomSizes() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('customBlockSizes') || '{}');
+        Object.keys(saved).forEach(id => {
+            const block = document.getElementById('block-' + id);
+            if (block && saved[id]) {
+                if (saved[id].width) block.style.width = saved[id].width;
+                if (saved[id].height) block.style.height = saved[id].height;
+                if (saved[id].minHeight) block.style.minHeight = saved[id].minHeight;
+            }
+        });
+    } catch(e){}
+}
+
+function resetBlockSizes() {
+    localStorage.removeItem('customBlockSizes');
+    document.querySelectorAll('.layout-block').forEach(block => {
+        block.style.width = '';
+        block.style.height = '';
+        block.style.minHeight = '';
+    });
+    showToast('Block sizes reset to default!');
+}
+
+function saveCustomLayout() {
+    const content = document.getElementById('content');
+    const order = Array.from(content.children).map(el => el.dataset.blockId).filter(Boolean);
+    localStorage.setItem('customBlockOrder', JSON.stringify(order));
+    saveCustomSizes();
+    localStorage.setItem('currentLayout', 'custom');
+    setLayoutPreset('custom', true);
+    toggleLayoutEditor(false);
+    showToast('Custom layout order and sizes saved!');
+}
+
+function resetToPresetLayout() {
+    localStorage.removeItem('customBlockOrder');
+    localStorage.removeItem('customBlockSizes');
+    setLayoutPreset('classic');
+    toggleLayoutEditor(false);
+    location.reload();
+}
+
+function loadCustomPositions() {
+    try {
+        const savedOrder = JSON.parse(localStorage.getItem('customBlockOrder') || '[]');
+        if (savedOrder && savedOrder.length) {
+            const content = document.getElementById('content');
+            savedOrder.forEach(id => {
+                const el = document.getElementById('block-' + id);
+                if (el) content.appendChild(el);
+            });
+        }
+    } catch(e){}
+}
+
+/* ==========================================================================
+   CLOCK ENGINE
+   ========================================================================== */
+function setFormat(fmt) {
+    clockFormat = fmt;
+    localStorage.setItem('clockFormat', fmt);
+    document.getElementById('btn12').classList.toggle('active', fmt === 12);
+    document.getElementById('btn24').classList.toggle('active', fmt === 24);
+    updateClock();
+}
+
 function updateClock() {
     const now = new Date();
     let h = now.getHours();
     const m = String(now.getMinutes()).padStart(2,'0');
     const s = String(now.getSeconds()).padStart(2,'0');
     const ampmEl = document.getElementById('clockAMPM');
+    let displayHour = h;
+    let ap = '';
     if (clockFormat === 12) {
-        const ap = h >= 12 ? 'PM' : 'AM';
-        h = h % 12 || 12;
+        ap = h >= 12 ? 'PM' : 'AM';
+        displayHour = h % 12 || 12;
         ampmEl.style.display = '';
         ampmEl.textContent = ap;
     } else {
         ampmEl.style.display = 'none';
-        h = String(h).padStart(2,'0');
+        displayHour = String(h).padStart(2,'0');
     }
-    document.getElementById('clockH').textContent = String(h).padStart(2,'0');
+    document.getElementById('clockH').textContent = String(displayHour).padStart(2,'0');
     document.getElementById('clockM').textContent = m;
     document.getElementById('clockS').textContent = s;
     const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     document.getElementById('dateDay').textContent = DAYS[now.getDay()];
     document.getElementById('dateDate').textContent = `${MONTHS[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+    // Update Focus Mode Clock & Date
+    const focusClockEl = document.getElementById('focusClock');
+    const focusDateEl = document.getElementById('focusDate');
+    if (focusClockEl) {
+        const fHourStr = String(displayHour).padStart(2,'0');
+        focusClockEl.textContent = clockFormat === 12 ? `${fHourStr}:${m}:${s} ${ap}` : `${fHourStr}:${m}:${s}`;
+    }
+    if (focusDateEl) {
+        focusDateEl.textContent = `${DAYS[now.getDay()]}, ${MONTHS[now.getMonth()]} ${now.getDate()}`;
+    }
 }
 setInterval(updateClock, 1000);
 updateClock();
 
-function setFormat(fmt) {
-    clockFormat = fmt;
-    localStorage.setItem('clockFormat', fmt);
-    document.getElementById('fmt12').classList.toggle('active', fmt === 12);
-    document.getElementById('fmt24').classList.toggle('active', fmt === 24);
-    updateClock();
-}
-
-/* ======= SETTINGS ======= */
+/* ==========================================================================
+   THEME, ATOM & STYLES ENGINE
+   ========================================================================== */
 document.getElementById('settingsBtn').onclick = () => document.getElementById('settingsOverlay').classList.add('open');
 document.getElementById('settingsClose').onclick = () => document.getElementById('settingsOverlay').classList.remove('open');
 document.getElementById('settingsOverlay').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
@@ -627,18 +2593,43 @@ function setAccentColor(val) {
     localStorage.setItem('colorAccent', val);
 }
 
-function resetSettings() {
-    if (!confirm('Reset all settings to default?')) return;
-    const defs = { colorHour:'#ffffff', colorMinute:'#00d8ff', colorSecond:'#ff6b6b', colorColon:'#888888', colorAmpm:'#00d8ff', colorDay:'#aaaaaa', colorDate:'#cccccc' };
-    const vars = { colorHour:'--clock-hour-color', colorMinute:'--clock-minute-color', colorSecond:'--clock-second-color', colorColon:'--clock-colon-color', colorAmpm:'--clock-ampm-color', colorDay:'--clock-day-color', colorDate:'--clock-date-color' };
-    Object.keys(defs).forEach(k => {
-        const el = document.getElementById(k); if(el) el.value = defs[k];
-        document.documentElement.style.setProperty(vars[k], defs[k]);
-        localStorage.removeItem(k);
-    });
-    setAccentColor('#00d8ff');
-    document.getElementById('colorAccent').value = '#00d8ff';
-    setFormat(12);
+function setNucleusColor(val) {
+    document.documentElement.style.setProperty('--nucleus-color', val);
+    const el = document.getElementById('colorNucleus');
+    if (el) el.value = val;
+    localStorage.setItem('colorNucleus', val);
+}
+
+function setElectronColor(val) {
+    document.documentElement.style.setProperty('--electron-color', val);
+    document.documentElement.style.setProperty('--electron-color-hex', val);
+    const el = document.getElementById('colorElectron');
+    if (el) el.value = val;
+    localStorage.setItem('colorElectron', val);
+}
+
+function setGlassBlur(val) {
+    const num = parseInt(val);
+    document.documentElement.style.setProperty('--glass-blur', num + 'px');
+    const label = document.getElementById('glassBlurVal');
+    if (label) label.textContent = num + 'px';
+    const range = document.getElementById('glassBlurRange');
+    if (range) range.value = num;
+    localStorage.setItem('glassBlur', num);
+}
+
+function setGlassOpacity(val) {
+    const num = parseInt(val);
+    const op = (num / 100).toFixed(2);
+    const opHover = ((num + 6) / 100).toFixed(2);
+    document.documentElement.style.setProperty('--glass-opacity', op);
+    document.documentElement.style.setProperty('--glass-bg', `rgba(255, 255, 255, ${op})`);
+    document.documentElement.style.setProperty('--glass-bg-hover', `rgba(255, 255, 255, ${opHover})`);
+    const label = document.getElementById('glassOpacityVal');
+    if (label) label.textContent = num + '%';
+    const range = document.getElementById('glassOpacityRange');
+    if (range) range.value = num;
+    localStorage.setItem('glassOpacity', num);
 }
 
 function loadSettings() {
@@ -647,14 +2638,422 @@ function loadSettings() {
         const v = localStorage.getItem(k);
         if (v) { document.documentElement.style.setProperty(vars[k], v); const el=document.getElementById(k); if(el) el.value=v; }
     });
-    const acc = localStorage.getItem('colorAccent');
-    if (acc) { setAccentColor(acc); document.getElementById('colorAccent').value = acc; }
-    const fmt = localStorage.getItem('clockFormat');
-    if (fmt) setFormat(parseInt(fmt));
+    const acc = localStorage.getItem('colorAccent') || '#00d8ff';
+    setAccentColor(acc);
+    document.getElementById('colorAccent').value = acc;
+
+    const nCol = localStorage.getItem('colorNucleus') || '#00ff88';
+    setNucleusColor(nCol);
+    const eCol = localStorage.getItem('colorElectron') || '#ff4757';
+    setElectronColor(eCol);
+
+    const blur = localStorage.getItem('glassBlur') || '12';
+    setGlassBlur(blur);
+    const opacity = localStorage.getItem('glassOpacity') || '8';
+    setGlassOpacity(opacity);
+
+    setFormat(clockFormat);
+    loadShortcutSize();
 }
 loadSettings();
 
-/* ======= SEARCH ======= */
+/* ==========================================================================
+   BACKGROUND WALLPAPER ENGINE
+   ========================================================================== */
+function applyBackground(imageUrl, type) {
+    const bgEl = document.getElementById('customBg');
+    if (!bgEl) return;
+    bgEl.style.backgroundImage = `url("${imageUrl}")`;
+    bgEl.classList.add('has-image');
+    document.getElementById('bgOverlay').classList.add('active');
+
+    const previewWrap = document.getElementById('bgPreviewWrap');
+    const previewImg = document.getElementById('bgPreviewImg');
+    if (previewWrap && previewImg) {
+        previewImg.src = imageUrl;
+        previewWrap.classList.add('active');
+    }
+
+    localStorage.setItem('bgImage', imageUrl);
+    localStorage.setItem('bgType', type || 'url');
+}
+
+function removeBackground(silent = false) {
+    const bgEl = document.getElementById('customBg');
+    if (bgEl) {
+        bgEl.style.backgroundImage = '';
+        bgEl.classList.remove('has-image');
+    }
+    document.getElementById('bgOverlay').classList.remove('active');
+
+    const previewWrap = document.getElementById('bgPreviewWrap');
+    const previewImg = document.getElementById('bgPreviewImg');
+    if (previewWrap && previewImg) {
+        previewImg.src = '';
+        previewWrap.classList.remove('active');
+    }
+
+    const urlInput = document.getElementById('bgUrlInput');
+    if (urlInput) urlInput.value = '';
+    const fileInput = document.getElementById('bgFileInput');
+    if (fileInput) fileInput.value = '';
+
+    localStorage.removeItem('bgImage');
+    localStorage.removeItem('bgType');
+
+    if (!silent) showToast('Wallpaper restored to default gradient.');
+}
+
+function applyBgUrl() {
+    const input = document.getElementById('bgUrlInput');
+    const url = input ? input.value.trim() : '';
+    if (!url) {
+        showToast('Please enter an image URL.', true);
+        return;
+    }
+    applyBackground(url, 'url');
+    input.value = '';
+    showToast('Background updated from URL!');
+}
+
+function triggerBgUpload() {
+    const input = document.getElementById('bgFileInput');
+    if (input) { input.value = ''; input.click(); }
+}
+
+function handleBgFileUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+        showToast('Please select a valid image file!', true);
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const rawDataUrl = e.target.result;
+        const img = new Image();
+        img.onload = function() {
+            const maxW = 1920, maxH = 1080;
+            let w = img.width, h = img.height;
+            if (w > maxW || h > maxH) {
+                const ratio = Math.min(maxW / w, maxH / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            try {
+                applyBackground(optimizedDataUrl, 'device');
+                showToast('Background updated from device!');
+            } catch (err) {
+                console.error('Storage error:', err);
+                showToast('Image too large for local storage.', true);
+            }
+        };
+        img.src = rawDataUrl;
+    };
+    reader.readAsDataURL(file);
+}
+
+function setBgDim(val) {
+    const num = parseInt(val);
+    const opacity = (num / 100).toFixed(2);
+    document.documentElement.style.setProperty('--bg-dim', opacity);
+    const dimValEl = document.getElementById('dimVal');
+    if (dimValEl) dimValEl.textContent = num + '%';
+    const range = document.getElementById('bgDimRange');
+    if (range) range.value = num;
+    localStorage.setItem('bgDim', num);
+}
+
+function setBgBlur(val) {
+    const num = parseInt(val);
+    document.documentElement.style.setProperty('--bg-blur', num + 'px');
+    const blurValEl = document.getElementById('blurVal');
+    if (blurValEl) blurValEl.textContent = num + 'px';
+    const range = document.getElementById('bgBlurRange');
+    if (range) range.value = num;
+    localStorage.setItem('bgBlur', num);
+}
+
+function loadBackgroundSettings() {
+    const dim = localStorage.getItem('bgDim') || '40';
+    setBgDim(dim);
+    const blur = localStorage.getItem('bgBlur') || '0';
+    setBgBlur(blur);
+
+    const savedBg = localStorage.getItem('bgImage');
+    const bgType = localStorage.getItem('bgType') || 'url';
+    if (savedBg) applyBackground(savedBg, bgType);
+}
+loadBackgroundSettings();
+
+/* ==========================================================================
+   RESET ENGINE
+   ========================================================================== */
+function resetSettings() {
+    if (!confirm('Reset all dashboard settings, shortcuts, and layout to defaults?')) return;
+    localStorage.clear();
+    location.reload();
+}
+
+/* ==========================================================================
+   TOAST NOTIFICATION ENGINE
+   ========================================================================== */
+function showToast(message, isError = false) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${isError ? 'error' : ''}`;
+    toast.innerHTML = `<i class="fas ${isError ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i> <span>${escH(message)}</span>`;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 350);
+    }, 3200);
+}
+
+/* ==========================================================================
+   GRANULAR & SELECTIVE EXPORT & IMPORT
+   ========================================================================== */
+function openCustomBackupModal() {
+    document.getElementById('settingsOverlay').classList.remove('open');
+    document.getElementById('customBackupModal').classList.add('open');
+}
+
+function closeCustomBackupModal() {
+    document.getElementById('customBackupModal').classList.remove('open');
+}
+
+function exportSettings(selectedModules) {
+    try {
+        const modules = selectedModules || { clock: true, atom: true, glass: true, shortcuts: true, layout: true };
+        const data = {
+            appName: 'Chrome New Tab Dashboard',
+            version: 2,
+            exportedAt: new Date().toISOString(),
+            modules: modules,
+            settings: {}
+        };
+
+        if (modules.clock) {
+            data.settings.clock = {
+                clockFormat: clockFormat,
+                colorHour: localStorage.getItem('colorHour') || '#ffffff',
+                colorMinute: localStorage.getItem('colorMinute') || '#00d8ff',
+                colorSecond: localStorage.getItem('colorSecond') || '#ff6b6b',
+                colorColon: localStorage.getItem('colorColon') || '#888888',
+                colorAmpm: localStorage.getItem('colorAmpm') || '#00d8ff',
+                colorDay: localStorage.getItem('colorDay') || '#aaaaaa',
+                colorDate: localStorage.getItem('colorDate') || '#cccccc'
+            };
+        }
+
+        if (modules.atom) {
+            data.settings.atom = {
+                colorAccent: localStorage.getItem('colorAccent') || '#00d8ff',
+                colorNucleus: localStorage.getItem('colorNucleus') || '#00ff88',
+                colorElectron: localStorage.getItem('colorElectron') || '#ff4757',
+                savedText: localStorage.getItem('savedText') || 'Coding is Love ❤️'
+            };
+        }
+
+        if (modules.glass) {
+            data.settings.glass = {
+                glassBlur: localStorage.getItem('glassBlur') || '12',
+                glassOpacity: localStorage.getItem('glassOpacity') || '8',
+                bgType: localStorage.getItem('bgType') || 'default',
+                bgImage: localStorage.getItem('bgImage') || '',
+                bgDim: localStorage.getItem('bgDim') || '40',
+                bgBlur: localStorage.getItem('bgBlur') || '0'
+            };
+        }
+
+        if (modules.shortcuts) {
+            data.settings.shortcuts = {
+                shortcutSize: localStorage.getItem('shortcutSize') || '58',
+                bottomShortcuts: bottomShortcuts,
+                topNavLinks: topNavLinks,
+                topSocialLinks: topSocialLinks
+            };
+        }
+
+        if (modules.layout) {
+            data.settings.layout = {
+                currentLayout: currentLayout,
+                customBlockOrder: localStorage.getItem('customBlockOrder') || ''
+            };
+        }
+
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `newtab-settings-${y}-${m}-${d}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast('Settings exported successfully!');
+        closeCustomBackupModal();
+    } catch(err) {
+        showToast('Failed to export settings: ' + err.message, true);
+    }
+}
+
+function exportSelectedSettings() {
+    const modules = {
+        clock: document.getElementById('chkClock').checked,
+        atom: document.getElementById('chkAtom').checked,
+        glass: document.getElementById('chkGlass').checked,
+        shortcuts: document.getElementById('chkShortcuts').checked,
+        layout: document.getElementById('chkLayout').checked
+    };
+    exportSettings(modules);
+}
+
+function triggerImport() {
+    const input = document.getElementById('importFileInput');
+    if (input) { input.value = ''; input.click(); }
+}
+
+function triggerCustomImport() {
+    const input = document.getElementById('customImportFileInput');
+    if (input) { input.value = ''; input.click(); }
+}
+
+function handleImportFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            applyImportedData(data, null);
+        } catch(err) { showToast('Invalid JSON file format!', true); }
+    };
+    reader.readAsText(file);
+}
+
+function handleCustomImportFile(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            const filter = {
+                clock: document.getElementById('chkClock').checked,
+                atom: document.getElementById('chkAtom').checked,
+                glass: document.getElementById('chkGlass').checked,
+                shortcuts: document.getElementById('chkShortcuts').checked,
+                layout: document.getElementById('chkLayout').checked
+            };
+            applyImportedData(data, filter);
+            closeCustomBackupModal();
+        } catch(err) { showToast('Invalid JSON file format!', true); }
+    };
+    reader.readAsText(file);
+}
+
+function applyImportedData(data, filter) {
+    if (!data || typeof data !== 'object') {
+        showToast('Invalid settings file format!', true);
+        return;
+    }
+
+    const s = data.settings || data;
+    let appliedCount = 0;
+
+    // 1. Clock Module
+    if (!filter || filter.clock) {
+        const c = s.clock || s;
+        if (c.clockFormat) { setFormat(parseInt(c.clockFormat)); appliedCount++; }
+        ['colorHour','colorMinute','colorSecond','colorColon','colorAmpm','colorDay','colorDate'].forEach(k => {
+            if (c[k]) { setCSSVar(`--clock-${k.slice(5).toLowerCase()}-color`, c[k], k); const el=document.getElementById(k); if(el)el.value=c[k]; appliedCount++; }
+        });
+    }
+
+    // 2. Atom Module
+    if (!filter || filter.atom) {
+        const a = s.atom || s;
+        if (a.colorAccent) { setAccentColor(a.colorAccent); appliedCount++; }
+        if (a.colorNucleus) { setNucleusColor(a.colorNucleus); appliedCount++; }
+        if (a.colorElectron) { setElectronColor(a.colorElectron); appliedCount++; }
+        if (a.savedText) {
+            localStorage.setItem('savedText', a.savedText);
+            const et = document.getElementById('editable-text');
+            if (et) et.textContent = a.savedText;
+            appliedCount++;
+        }
+    }
+
+    // 3. Glass & Wallpaper Module
+    if (!filter || filter.glass) {
+        const g = s.glass || s;
+        if (g.glassBlur) { setGlassBlur(g.glassBlur); appliedCount++; }
+        if (g.glassOpacity) { setGlassOpacity(g.glassOpacity); appliedCount++; }
+        if (g.bgImage) { applyBackground(g.bgImage, g.bgType || 'url'); appliedCount++; }
+        if (g.bgDim !== undefined) { setBgDim(g.bgDim); appliedCount++; }
+        if (g.bgBlur !== undefined) { setBgBlur(g.bgBlur); appliedCount++; }
+    }
+
+    // 4. Shortcuts Module
+    if (!filter || filter.shortcuts) {
+        const sc = s.shortcuts || s;
+        if (sc.shortcutSize) { setShortcutSize(sc.shortcutSize); appliedCount++; }
+        if (Array.isArray(sc.bottomShortcuts)) {
+            bottomShortcuts = sc.bottomShortcuts;
+            localStorage.setItem('bottomShortcuts', JSON.stringify(bottomShortcuts));
+            appliedCount++;
+        }
+        if (Array.isArray(sc.topNavLinks)) {
+            topNavLinks = sc.topNavLinks;
+            localStorage.setItem('topNavLinks', JSON.stringify(topNavLinks));
+            appliedCount++;
+        }
+        if (Array.isArray(sc.topSocialLinks)) {
+            topSocialLinks = sc.topSocialLinks;
+            localStorage.setItem('topSocialLinks', JSON.stringify(topSocialLinks));
+            appliedCount++;
+        }
+        renderAllComponents();
+    }
+
+    // 5. Layout Module
+    if (!filter || filter.layout) {
+        const l = s.layout || s;
+        if (l.currentLayout) { setLayoutPreset(l.currentLayout, true); appliedCount++; }
+        if (l.customBlockOrder) {
+            localStorage.setItem('customBlockOrder', typeof l.customBlockOrder === 'string' ? l.customBlockOrder : JSON.stringify(l.customBlockOrder));
+            loadCustomPositions();
+            appliedCount++;
+        }
+    }
+
+    if (appliedCount > 0) {
+        showToast('Settings restored successfully!');
+    } else {
+        showToast('No matching settings found in file.', true);
+    }
+}
+
+/* ==========================================================================
+   SEARCH & EDITABLE TEXT
+   ========================================================================== */
 document.getElementById('search').addEventListener('keypress', e => { if(e.key==='Enter') googleSearch(); });
 function googleSearch() {
     const q = document.getElementById('search').value.trim();
@@ -663,73 +3062,694 @@ function googleSearch() {
 document.getElementById('mic-button').onclick = () => {
     const R = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (R) { const r = new R(); r.onresult=e=>{document.getElementById('search').value=e.results[0][0].transcript; googleSearch();}; r.start(); }
-    else alert('Speech recognition not supported.');
+    else showToast('Speech recognition not supported in this browser.', true);
 };
 
-/* ======= EDITABLE TEXT ======= */
 const et = document.getElementById('editable-text');
 const st = localStorage.getItem('savedText');
 if (st) et.textContent = st;
 et.addEventListener('input', function(){ localStorage.setItem('savedText', this.textContent.trim()); });
 
-/* ======= HIDDEN BUILTINS ======= */
-let hiddenBuiltins = [];
-try { hiddenBuiltins = JSON.parse(localStorage.getItem('hiddenBuiltins') || '[]'); } catch(e){}
-hiddenBuiltins.forEach(id => { const el = document.querySelector(`.app-link[data-id="${id}"]`); if(el) el.remove(); });
+/* ==========================================================================
+   STOPWATCH ENGINE
+   ========================================================================== */
+let swRunning = false;
+let swStartTime = 0;
+let swElapsedTime = 0;
+let swAnimFrame = null;
+let swLaps = [];
 
-function deleteBuiltin(e, id) {
-    e.preventDefault(); e.stopPropagation();
-    const el = document.querySelector(`.app-link[data-id="${id}"]`);
-    if (!el) return;
-    el.remove();
-    hiddenBuiltins.push(id);
-    localStorage.setItem('hiddenBuiltins', JSON.stringify(hiddenBuiltins));
+function toggleStopwatch() {
+    const startBtn = document.getElementById('swStartBtn');
+    const startIcon = document.getElementById('swStartIcon');
+    const startTxt = document.getElementById('swStartTxt');
+    const lapBtn = document.getElementById('swLapBtn');
+
+    if (!swRunning) {
+        swRunning = true;
+        swStartTime = Date.now() - swElapsedTime;
+        swAnimFrame = requestAnimationFrame(updateStopwatchUI);
+        
+        if (startBtn) startBtn.classList.add('running');
+        if (startIcon) startIcon.className = 'fas fa-pause';
+        if (startTxt) startTxt.textContent = 'Pause';
+        if (lapBtn) lapBtn.disabled = false;
+    } else {
+        swRunning = false;
+        if (swAnimFrame) cancelAnimationFrame(swAnimFrame);
+        
+        if (startBtn) startBtn.classList.remove('running');
+        if (startIcon) startIcon.className = 'fas fa-play';
+        if (startTxt) startTxt.textContent = 'Resume';
+        if (lapBtn) lapBtn.disabled = true;
+    }
 }
 
-/* ======= CUSTOM SHORTCUTS ======= */
-function escH(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function updateStopwatchUI() {
+    if (!swRunning) return;
+    swElapsedTime = Date.now() - swStartTime;
 
-function renderCustomShortcuts() {
-    document.querySelectorAll('.app-link[data-custom]').forEach(el=>el.remove());
-    customShortcuts.forEach((sc, idx) => {
-        const color = iconColors[sc.icon] || '#00d8ff';
-        const href = sc.url.startsWith('http') ? sc.url : `https://${sc.url}`;
-        const a = document.createElement('a');
-        a.href = href; a.className = 'app-link'; a.dataset.custom = idx;
-        a.innerHTML = `<i class="fas ${escH(sc.icon)}" style="color:${color};font-size:1.5rem;width:1.8rem;text-align:center;flex-shrink:0;"></i>
-            <div class="app-info"><span class="app-name">${escH(sc.name)}</span><span class="app-url">${escH(sc.url)}</span></div>
-            <button class="delete-shortcut" onclick="deleteCustom(event,${idx})"><i class="fas fa-times"></i></button>`;
-        document.getElementById('apps-container').appendChild(a);
+    const msTotal = swElapsedTime;
+    const hrs = Math.floor(msTotal / 3600000);
+    const mins = Math.floor((msTotal % 3600000) / 60000);
+    const secs = Math.floor((msTotal % 60000) / 1000);
+    const ms = Math.floor((msTotal % 1000) / 10);
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const displayEl = document.getElementById('stopwatchDisplay');
+    if (displayEl) {
+        const timeStr = hrs > 0 
+            ? `${pad(hrs)}:${pad(mins)}:${pad(secs)}`
+            : `${pad(mins)}:${pad(secs)}`;
+        displayEl.innerHTML = `${timeStr}<span class="stopwatch-ms">.${pad(ms)}</span>`;
+    }
+
+    swAnimFrame = requestAnimationFrame(updateStopwatchUI);
+}
+
+function lapStopwatch() {
+    if (!swRunning) return;
+    const prevLapsTime = swLaps.reduce((acc, l) => acc + l.lapTime, 0);
+    const currentLapTime = swElapsedTime - prevLapsTime;
+    
+    swLaps.unshift({
+        lapNum: swLaps.length + 1,
+        lapTime: currentLapTime,
+        totalTime: swElapsedTime
+    });
+
+    renderStopwatchLaps();
+}
+
+function formatTimeMs(msTotal) {
+    const hrs = Math.floor(msTotal / 3600000);
+    const mins = Math.floor((msTotal % 3600000) / 60000);
+    const secs = Math.floor((msTotal % 60000) / 1000);
+    const ms = Math.floor((msTotal % 1000) / 10);
+    const pad = (n) => String(n).padStart(2, '0');
+    return hrs > 0 
+        ? `${pad(hrs)}:${pad(mins)}:${pad(secs)}.${pad(ms)}`
+        : `${pad(mins)}:${pad(secs)}.${pad(ms)}`;
+}
+
+function renderStopwatchLaps() {
+    const container = document.getElementById('swLapsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    swLaps.forEach(lap => {
+        const div = document.createElement('div');
+        div.className = 'sw-lap-item';
+        div.innerHTML = `
+            <span>Lap ${lap.lapNum}</span>
+            <span>+${formatTimeMs(lap.lapTime)}</span>
+            <span>${formatTimeMs(lap.totalTime)}</span>
+        `;
+        container.appendChild(div);
     });
 }
 
-function openShortcutModal() { document.getElementById('shortcutModal').classList.add('open'); }
-function closeShortcutModal() {
-    document.getElementById('shortcutModal').classList.remove('open');
-    document.getElementById('shortcutName').value='';
-    document.getElementById('shortcutUrl').value='';
-}
-document.getElementById('shortcutModal').addEventListener('click', function(e){ if(e.target===this) closeShortcutModal(); });
+function resetStopwatch() {
+    swRunning = false;
+    if (swAnimFrame) cancelAnimationFrame(swAnimFrame);
+    swElapsedTime = 0;
+    swLaps = [];
 
-function addShortcut() {
-    const name = document.getElementById('shortcutName').value.trim();
-    const url  = document.getElementById('shortcutUrl').value.trim();
-    const icon = document.getElementById('shortcutIcon').value;
-    if (!name || !url) { alert('Please fill in Name and URL.'); return; }
-    customShortcuts.push({name, url, icon});
-    localStorage.setItem('customShortcuts', JSON.stringify(customShortcuts));
-    renderCustomShortcuts();
-    closeShortcutModal();
+    const displayEl = document.getElementById('stopwatchDisplay');
+    if (displayEl) displayEl.innerHTML = `00:00<span class="stopwatch-ms">.00</span>`;
+
+    const startBtn = document.getElementById('swStartBtn');
+    const startIcon = document.getElementById('swStartIcon');
+    const startTxt = document.getElementById('swStartTxt');
+    const lapBtn = document.getElementById('swLapBtn');
+
+    if (startBtn) {
+        startBtn.classList.remove('running');
+        if (startIcon) startIcon.className = 'fas fa-play';
+        if (startTxt) startTxt.textContent = 'Start';
+    }
+    if (lapBtn) lapBtn.disabled = true;
+
+    const container = document.getElementById('swLapsContainer');
+    if (container) container.innerHTML = '';
 }
 
-function deleteCustom(e, idx) {
-    e.preventDefault(); e.stopPropagation();
-    customShortcuts.splice(idx, 1);
-    localStorage.setItem('customShortcuts', JSON.stringify(customShortcuts));
-    renderCustomShortcuts();
+/* ==========================================================================
+   COUNTDOWN TIMER ENGINE
+   ========================================================================== */
+let tmRunning = false;
+let tmRemainingSeconds = 1500;
+let tmTotalSeconds = 1500;
+let tmEndTime = 0;
+let tmInterval = null;
+
+function switchFocusTool(tool) {
+    const swBtn = document.getElementById('tabStopwatchBtn');
+    const tmBtn = document.getElementById('tabTimerBtn');
+    const swPane = document.getElementById('stopwatchPane');
+    const tmPane = document.getElementById('timerPane');
+
+    if (tool === 'stopwatch') {
+        if (swBtn) swBtn.classList.add('active');
+        if (tmBtn) tmBtn.classList.remove('active');
+        if (swPane) swPane.style.display = 'flex';
+        if (tmPane) tmPane.style.display = 'none';
+    } else {
+        if (tmBtn) tmBtn.classList.add('active');
+        if (swBtn) swBtn.classList.remove('active');
+        if (tmPane) tmPane.style.display = 'flex';
+        if (swPane) swPane.style.display = 'none';
+    }
 }
 
-renderCustomShortcuts();
+function toggleTimer() {
+    const startBtn = document.getElementById('tmStartBtn');
+    const startIcon = document.getElementById('tmStartIcon');
+    const startTxt = document.getElementById('tmStartTxt');
+
+    if (!tmRunning) {
+        if (tmRemainingSeconds <= 0) {
+            updateTimerFromInputs();
+        }
+        if (tmRemainingSeconds <= 0) {
+            showToast('Please set a timer duration first!', true);
+            return;
+        }
+
+        tmRunning = true;
+        tmEndTime = Date.now() + (tmRemainingSeconds * 1000);
+        tmInterval = setInterval(updateTimerTick, 250);
+
+        if (startBtn) startBtn.classList.add('running');
+        if (startIcon) startIcon.className = 'fas fa-pause';
+        if (startTxt) startTxt.textContent = 'Pause';
+        setTimerInputsDisabled(true);
+    } else {
+        tmRunning = false;
+        if (tmInterval) clearInterval(tmInterval);
+
+        if (startBtn) startBtn.classList.remove('running');
+        if (startIcon) startIcon.className = 'fas fa-play';
+        if (startTxt) startTxt.textContent = 'Resume';
+        setTimerInputsDisabled(false);
+    }
+}
+
+function updateTimerTick() {
+    if (!tmRunning) return;
+    const diff = Math.max(0, Math.ceil((tmEndTime - Date.now()) / 1000));
+    tmRemainingSeconds = diff;
+
+    renderTimerDisplay();
+
+    if (diff <= 0) {
+        tmRunning = false;
+        if (tmInterval) clearInterval(tmInterval);
+
+        const startBtn = document.getElementById('tmStartBtn');
+        const startIcon = document.getElementById('tmStartIcon');
+        const startTxt = document.getElementById('tmStartTxt');
+        if (startBtn) {
+            startBtn.classList.remove('running');
+            if (startIcon) startIcon.className = 'fas fa-play';
+            if (startTxt) startTxt.textContent = 'Start Timer';
+        }
+        setTimerInputsDisabled(false);
+        playTimerChime();
+        showToast('⏰ Time is up! Great focus session! 🎉');
+    }
+}
+
+function renderTimerDisplay() {
+    const hrs = Math.floor(tmRemainingSeconds / 3600);
+    const mins = Math.floor((tmRemainingSeconds % 3600) / 60);
+    const secs = tmRemainingSeconds % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+
+    const displayEl = document.getElementById('timerDisplay');
+    if (displayEl) {
+        displayEl.textContent = hrs > 0 
+            ? `${pad(hrs)}:${pad(mins)}:${pad(secs)}`
+            : `${pad(mins)}:${pad(secs)}`;
+    }
+}
+
+function setTimerInputsDisabled(disabled) {
+    const h = document.getElementById('timerHours');
+    const m = document.getElementById('timerMinutes');
+    const s = document.getElementById('timerSeconds');
+    if (h) h.disabled = disabled;
+    if (m) m.disabled = disabled;
+    if (s) s.disabled = disabled;
+}
+
+function updateTimerFromInputs() {
+    if (tmRunning) return;
+    const h = parseInt(document.getElementById('timerHours')?.value || '0') || 0;
+    const m = parseInt(document.getElementById('timerMinutes')?.value || '0') || 0;
+    const s = parseInt(document.getElementById('timerSeconds')?.value || '0') || 0;
+
+    tmRemainingSeconds = (h * 3600) + (m * 60) + s;
+    tmTotalSeconds = tmRemainingSeconds;
+    renderTimerDisplay();
+}
+
+function setTimerTime(seconds) {
+    if (tmRunning) resetTimer();
+    tmRemainingSeconds = seconds;
+    tmTotalSeconds = seconds;
+
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    const hEl = document.getElementById('timerHours');
+    const mEl = document.getElementById('timerMinutes');
+    const sEl = document.getElementById('timerSeconds');
+    if (hEl) hEl.value = hrs;
+    if (mEl) mEl.value = mins;
+    if (sEl) sEl.value = secs;
+
+    renderTimerDisplay();
+    showToast(`Timer set to ${hrs > 0 ? hrs + 'h ' : ''}${mins}m ${secs > 0 ? secs + 's' : ''}`);
+}
+
+function resetTimer() {
+    tmRunning = false;
+    if (tmInterval) clearInterval(tmInterval);
+
+    const startBtn = document.getElementById('tmStartBtn');
+    const startIcon = document.getElementById('tmStartIcon');
+    const startTxt = document.getElementById('tmStartTxt');
+    if (startBtn) {
+        startBtn.classList.remove('running');
+        if (startIcon) startIcon.className = 'fas fa-play';
+        if (startTxt) startTxt.textContent = 'Start Timer';
+    }
+
+    setTimerInputsDisabled(false);
+    updateTimerFromInputs();
+}
+
+function playTimerChime() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+
+        const notes = [523.25, 659.25, 784.00, 1046.50];
+        notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+
+            const startTime = ctx.currentTime + (idx * 0.15);
+            gain.gain.setValueAtTime(0.3, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(startTime);
+            osc.stop(startTime + 0.4);
+        });
+    } catch(e){}
+}
+
+/* ==========================================================================
+   FOCUS SHORTCUTS ENGINE
+   ========================================================================== */
+const DEFAULT_FOCUS_SHORTCUTS = [
+    { name: 'Google', url: 'https://google.com', icon: 'fab fa-google' },
+    { name: 'ChatGPT', url: 'https://chatgpt.com', icon: 'fas fa-robot' }
+];
+let focusShortcuts = [];
+
+function initFocusShortcuts() {
+    try {
+        const saved = localStorage.getItem('focusShortcuts');
+        focusShortcuts = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_FOCUS_SHORTCUTS));
+    } catch(e) {
+        focusShortcuts = JSON.parse(JSON.stringify(DEFAULT_FOCUS_SHORTCUTS));
+    }
+    renderFocusShortcuts();
+}
+
+function renderFocusShortcuts() {
+    const grid = document.getElementById('focusShortcutsGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    focusShortcuts.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'focus-shortcut-card';
+        const href = item.url.startsWith('http') ? item.url : `https://${item.url}`;
+
+        let iconMarkup = '';
+        if (item.icon && item.icon.startsWith('http')) {
+            iconMarkup = `<img src="${escH(item.icon)}" alt="${escH(item.name)}" onerror="this.outerHTML='<i class=\'fas fa-globe\'></i>'">`;
+        } else if (item.icon) {
+            iconMarkup = `<i class="${escH(item.icon)}"></i>`;
+        } else {
+            iconMarkup = `<img src="${escH(getFaviconUrl(item.url))}" alt="${escH(item.name)}" onerror="this.outerHTML='<i class=\'fas fa-globe\'></i>'">`;
+        }
+
+        card.innerHTML = `
+            <a href="${href}" class="focus-shortcut-link" target="_blank" rel="noopener">
+                <div class="focus-shortcut-icon">${iconMarkup}</div>
+                <span class="focus-shortcut-name">${escH(item.name)}</span>
+            </a>
+            <button class="focus-shortcut-single-edit" onclick="openFocusShortcutsModal()" title="Edit Focus Shortcuts">
+                <i class="fas fa-pen"></i>
+            </button>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function openFocusShortcutsModal() {
+    const el1N = document.getElementById('fsc1Name');
+    const el1U = document.getElementById('fsc1Url');
+    const el1I = document.getElementById('fsc1Icon');
+    const el2N = document.getElementById('fsc2Name');
+    const el2U = document.getElementById('fsc2Url');
+    const el2I = document.getElementById('fsc2Icon');
+    if (el1N) el1N.value = focusShortcuts[0]?.name || '';
+    if (el1U) el1U.value = focusShortcuts[0]?.url || '';
+    if (el1I) el1I.value = focusShortcuts[0]?.icon || '';
+    if (el2N) el2N.value = focusShortcuts[1]?.name || '';
+    if (el2U) el2U.value = focusShortcuts[1]?.url || '';
+    if (el2I) el2I.value = focusShortcuts[1]?.icon || '';
+    document.getElementById('focusShortcutsModal')?.classList.add('open');
+}
+
+function closeFocusShortcutsModal() {
+    document.getElementById('focusShortcutsModal')?.classList.remove('open');
+}
+
+function saveFocusShortcuts() {
+    const sc1 = {
+        name: document.getElementById('fsc1Name')?.value.trim() || 'Google',
+        url: document.getElementById('fsc1Url')?.value.trim() || 'https://google.com',
+        icon: document.getElementById('fsc1Icon')?.value.trim() || 'fab fa-google'
+    };
+    const sc2 = {
+        name: document.getElementById('fsc2Name')?.value.trim() || 'ChatGPT',
+        url: document.getElementById('fsc2Url')?.value.trim() || 'https://chatgpt.com',
+        icon: document.getElementById('fsc2Icon')?.value.trim() || 'fas fa-robot'
+    };
+
+    focusShortcuts = [sc1, sc2];
+    localStorage.setItem('focusShortcuts', JSON.stringify(focusShortcuts));
+    renderFocusShortcuts();
+    closeFocusShortcutsModal();
+    showToast('Focus shortcuts updated!');
+}
+
+/* ==========================================================================
+   USER PROFILE PHOTO & AVATAR ENGINE
+   ========================================================================== */
+function applyProfilePhoto(imgUrl) {
+    const profileBtn = document.getElementById('profileTrigger');
+    const settingsPreview = document.getElementById('settingsProfilePreview');
+    if (profileBtn) {
+        profileBtn.innerHTML = `<img src="${escH(imgUrl)}" alt="Profile" style="width:100%;height:100%;object-fit:cover;" onerror="this.outerHTML='<i class=\\'fas fa-user\\' style=\\'font-size:2.4rem;color:rgba(255,255,255,0.4);\\'></i>'">`;
+    }
+    if (settingsPreview) {
+        settingsPreview.src = imgUrl;
+    }
+    if (imgUrl) localStorage.setItem('userProfileImg', imgUrl);
+}
+
+function removeProfilePhoto() {
+    localStorage.removeItem('userProfileImg');
+    const profileBtn = document.getElementById('profileTrigger');
+    const settingsPreview = document.getElementById('settingsProfilePreview');
+    if (profileBtn) {
+        profileBtn.innerHTML = `<img src="dp.png" alt="Profile" style="width:100%;height:100%;object-fit:cover;" onerror="this.outerHTML='<i class=\\'fas fa-user\\' style=\\'font-size:2.4rem;color:rgba(255,255,255,0.4);\\'></i>'">`;
+    }
+    if (settingsPreview) {
+        settingsPreview.src = 'dp.png';
+    }
+    showToast('Profile photo reset to default.');
+}
+
+function triggerProfileUpload() {
+    const input = document.getElementById('profileFileInput');
+    if (input) { input.value = ''; input.click(); }
+}
+
+function handleProfileFileUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+        showToast('Please select a valid image file!', true);
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const rawDataUrl = e.target.result;
+        const img = new Image();
+        img.onload = function() {
+            const maxW = 400, maxH = 400;
+            let w = img.width, h = img.height;
+            if (w > maxW || h > maxH) {
+                const ratio = Math.min(maxW / w, maxH / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/png');
+            applyProfilePhoto(dataUrl);
+            showToast('Profile photo updated!');
+        };
+        img.src = rawDataUrl;
+    };
+    reader.readAsDataURL(file);
+}
+
+function loadProfilePhoto() {
+    const saved = localStorage.getItem('userProfileImg');
+    if (saved) {
+        applyProfilePhoto(saved);
+    }
+}
+
+/* ==========================================================================
+   GOOGLE APPS & AI TOOLS SIDEBAR COLUMNS
+   ========================================================================== */
+const DEFAULT_GOOGLE_APPS = [
+    { id: 'ga_gmail',     name: 'Gmail',          url: 'https://mail.google.com',          icon: 'https://www.google.com/s2/favicons?domain=mail.google.com&sz=64',     visible: true },
+    { id: 'ga_drive',     name: 'Google Drive',   url: 'https://drive.google.com',         icon: 'https://www.google.com/s2/favicons?domain=drive.google.com&sz=64',    visible: true },
+    { id: 'ga_docs',      name: 'Google Docs',    url: 'https://docs.google.com',          icon: 'https://www.google.com/s2/favicons?domain=docs.google.com&sz=64',     visible: true },
+    { id: 'ga_maps',      name: 'Google Maps',    url: 'https://maps.google.com',          icon: 'https://www.google.com/s2/favicons?domain=maps.google.com&sz=64',     visible: true },
+    { id: 'ga_calendar',  name: 'Google Calendar',url: 'https://calendar.google.com',      icon: 'https://www.google.com/s2/favicons?domain=calendar.google.com&sz=64', visible: true }
+];
+
+const DEFAULT_AI_TOOLS = [
+    { id: 'ai_chatgpt',   name: 'ChatGPT',        url: 'https://chatgpt.com',              icon: 'https://www.google.com/s2/favicons?domain=chatgpt.com&sz=64',         visible: true },
+    { id: 'ai_claude',    name: 'Claude',          url: 'https://claude.ai',                icon: 'https://www.google.com/s2/favicons?domain=claude.ai&sz=64',           visible: true },
+    { id: 'ai_gemini',    name: 'Gemini',          url: 'https://gemini.google.com',        icon: 'https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64',   visible: true },
+    { id: 'ai_perplexity',name: 'Perplexity',      url: 'https://www.perplexity.ai',        icon: 'https://www.google.com/s2/favicons?domain=perplexity.ai&sz=64',       visible: true },
+    { id: 'ai_copilot',   name: 'Copilot',         url: 'https://copilot.microsoft.com',    icon: 'https://www.google.com/s2/favicons?domain=copilot.microsoft.com&sz=64',visible: true }
+];
+
+let googleApps = [];
+let aiTools = [];
+
+function initSidebarColumns() {
+    try {
+        const ga = localStorage.getItem('googleApps');
+        googleApps = ga ? JSON.parse(ga) : JSON.parse(JSON.stringify(DEFAULT_GOOGLE_APPS));
+    } catch(e) { googleApps = JSON.parse(JSON.stringify(DEFAULT_GOOGLE_APPS)); }
+
+    try {
+        const ai = localStorage.getItem('aiTools');
+        aiTools = ai ? JSON.parse(ai) : JSON.parse(JSON.stringify(DEFAULT_AI_TOOLS));
+    } catch(e) { aiTools = JSON.parse(JSON.stringify(DEFAULT_AI_TOOLS)); }
+
+    renderGoogleApps();
+    renderAiTools();
+}
+
+function renderSidebarCol(items, containerId, category) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    items.forEach((item, idx) => {
+        if (item.visible === false) return;
+        const href = item.url.startsWith('http') ? item.url : `https://${item.url}`;
+        const fallbackSvg = generateDomainSvg(item.name, item.url);
+
+        const a = document.createElement('a');
+        a.href = href;
+        a.className = 'sidebar-link-item';
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+
+        let iconHtml = '';
+        if (item.icon && item.icon.startsWith('data:')) {
+            iconHtml = `<img src="${escH(item.icon)}" onerror="this.onerror=null;this.src='${escH(fallbackSvg)}';" alt="${escH(item.name)}">`;
+        } else if (item.icon && item.icon.startsWith('http')) {
+            iconHtml = `<img src="${escH(item.icon)}" onerror="this.onerror=null;this.src='${escH(fallbackSvg)}';" alt="${escH(item.name)}">`;
+        } else if (item.icon && item.icon.startsWith('fa')) {
+            iconHtml = `<i class="${escH(item.icon)}" style="color:var(--accent-blue);"></i>`;
+        } else {
+            iconHtml = `<img src="${escH(fallbackSvg)}" alt="${escH(item.name)}">`;
+        }
+
+        a.innerHTML = `
+            <div class="sidebar-link-icon">${iconHtml}</div>
+            <span class="sidebar-link-name">${escH(item.name)}</span>
+            <button class="sidebar-link-edit" title="Edit" onclick="event.preventDefault();event.stopPropagation();openSidebarItemEdit('${escH(category)}',${idx})">
+                <i class="fas fa-pen"></i>
+            </button>`;
+        container.appendChild(a);
+    });
+}
+
+function renderGoogleApps() { renderSidebarCol(googleApps, 'google-apps-container', 'google'); }
+function renderAiTools()    { renderSidebarCol(aiTools, 'ai-tools-container', 'ai'); }
+
+function getSidebarList(cat) {
+    if (cat === 'google') return googleApps;
+    return aiTools;
+}
+function saveSidebarList(cat, list) {
+    if (cat === 'google') {
+        googleApps = list;
+        localStorage.setItem('googleApps', JSON.stringify(googleApps));
+    } else {
+        aiTools = list;
+        localStorage.setItem('aiTools', JSON.stringify(aiTools));
+    }
+}
+
+/* ---- Sidebar Edit Modal ---- */
+let sidebarEditCategory = '';
+let sidebarEditIdx = -1;
+
+function openSidebarEditModal(cat) {
+    sidebarEditCategory = cat;
+    sidebarEditIdx = -1;
+    const list = getSidebarList(cat);
+    const title = cat === 'google' ? '🔵 Edit Google Apps' : '🤖 Edit AI Tools';
+    buildSidebarModal(title, list);
+}
+
+function openSidebarItemEdit(cat, idx) {
+    sidebarEditCategory = cat;
+    sidebarEditIdx = idx;
+    const item = getSidebarList(cat)[idx];
+    if (!item) return;
+    document.getElementById('sidebarEditName').value = item.name || '';
+    document.getElementById('sidebarEditUrl').value = item.url || '';
+    document.getElementById('sidebarEditIcon').value = item.icon || '';
+    document.getElementById('sidebarEditItemForm').style.display = 'flex';
+    document.getElementById('sidebarEditList').style.display = 'none';
+    document.getElementById('sidebarModalTitle').textContent = 'Edit Item';
+    document.getElementById('sidebarEditModal').classList.add('open');
+}
+
+function buildSidebarModal(title, list) {
+    document.getElementById('sidebarModalTitle').textContent = title;
+    document.getElementById('sidebarEditItemForm').style.display = 'none';
+    document.getElementById('sidebarEditList').style.display = 'flex';
+
+    const listEl = document.getElementById('sidebarEditList');
+    listEl.innerHTML = '';
+
+    list.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'shortcut-item-row';
+        const fallback = generateDomainSvg(item.name, item.url);
+        let iconHtml = item.icon && item.icon.startsWith('http')
+            ? `<img src="${escH(item.icon)}" onerror="this.onerror=null;this.src='${escH(fallback)}';" style="width:22px;height:22px;object-fit:contain;">`
+            : `<img src="${escH(fallback)}" style="width:22px;height:22px;">`;
+
+        row.innerHTML = `
+            <div class="shortcut-item-info">
+                <div class="shortcut-item-icon">${iconHtml}</div>
+                <div class="shortcut-item-texts">
+                    <span class="shortcut-item-name">${escH(item.name)}</span>
+                    <span class="shortcut-item-url">${escH(item.url)}</span>
+                </div>
+            </div>
+            <div class="shortcut-item-actions">
+                <button onclick="openSidebarItemEdit('${escH(sidebarEditCategory)}',${idx})" title="Edit"><i class="fas fa-pen"></i></button>
+                <button onclick="deleteSidebarItem(${idx})" title="Delete" style="color:#ff4757;"><i class="fas fa-trash"></i></button>
+            </div>`;
+        listEl.appendChild(row);
+    });
+
+    // Add new button
+    const addBtn = document.createElement('button');
+    addBtn.className = 'settings-btn primary';
+    addBtn.style.cssText = 'margin-top:0.5rem;';
+    addBtn.innerHTML = '<i class="fas fa-plus"></i> Add New';
+    addBtn.onclick = () => {
+        sidebarEditIdx = -1;
+        document.getElementById('sidebarEditName').value = '';
+        document.getElementById('sidebarEditUrl').value = '';
+        document.getElementById('sidebarEditIcon').value = '';
+        document.getElementById('sidebarEditItemForm').style.display = 'flex';
+        document.getElementById('sidebarEditList').style.display = 'none';
+        document.getElementById('sidebarModalTitle').textContent = 'Add Item';
+    };
+    listEl.appendChild(addBtn);
+
+    document.getElementById('sidebarEditModal').classList.add('open');
+}
+
+function closeSidebarEditModal() {
+    document.getElementById('sidebarEditModal').classList.remove('open');
+}
+
+function saveSidebarItem() {
+    const name = document.getElementById('sidebarEditName').value.trim();
+    const url  = document.getElementById('sidebarEditUrl').value.trim();
+    const icon = document.getElementById('sidebarEditIcon').value.trim();
+    if (!url) { showToast('Please enter a URL.', true); return; }
+    const displayName = name || url.replace(/^(?:https?:\/\/)?(?:www\.)?/i,'').split('/')[0];
+    const autoIcon = icon || `https://www.google.com/s2/favicons?domain=${encodeURIComponent(url)}&sz=64`;
+    const newItem = { id: 'si_' + Date.now(), name: displayName, url, icon: autoIcon, visible: true };
+    const list = getSidebarList(sidebarEditCategory);
+    if (sidebarEditIdx >= 0) { list[sidebarEditIdx] = { ...list[sidebarEditIdx], name: displayName, url, icon: autoIcon }; }
+    else { list.push(newItem); }
+    saveSidebarList(sidebarEditCategory, list);
+    if (sidebarEditCategory === 'google') renderGoogleApps();
+    else renderAiTools();
+    // Go back to list view
+    const title = sidebarEditCategory === 'google' ? '🔵 Edit Google Apps' : '🤖 Edit AI Tools';
+    buildSidebarModal(title, getSidebarList(sidebarEditCategory));
+    showToast('Saved!');
+}
+
+function deleteSidebarItem(idx) {
+    if (!confirm('Remove this item?')) return;
+    const list = getSidebarList(sidebarEditCategory);
+    list.splice(idx, 1);
+    saveSidebarList(sidebarEditCategory, list);
+    if (sidebarEditCategory === 'google') renderGoogleApps();
+    else renderAiTools();
+    const title = sidebarEditCategory === 'google' ? '🔵 Edit Google Apps' : '🤖 Edit AI Tools';
+    buildSidebarModal(title, getSidebarList(sidebarEditCategory));
+    showToast('Removed.');
+}
+
+/* INITIALIZE ALL COMPONENTS ON LOAD */
+renderAllComponents();
+loadLayoutSetting();
+initFocusShortcuts();
+autoCacheIconsToLocalStorage();
+loadProfilePhoto();
+initSidebarColumns();
 </script>
 </body>
 </html>
