@@ -527,281 +527,326 @@
             font-size: 0.95rem;
         }
 
-        /* DROPDOWN PANELS WITH VERTICAL TOP-TO-BOTTOM ANIMATED LIST */
-        @keyframes dropSlideDown {
-            0% {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.95);
-            }
-
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .top-dropdown-panel {
+        /* ==========================================================================
+           VERTICAL SIDE COLUMNS (GOOGLE APPS & AI APPS - ICON DOCK)
+           ========================================================================== */
+        .side-column {
             position: fixed;
-            top: 3.8rem;
-            z-index: 1200;
-            width: 290px;
-            max-height: 80vh;
-            overflow-y: auto;
-            background: var(--glass-bg, rgba(255, 255, 255, 0.08));
-            border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
-            border-radius: 20px;
-            padding: 1.1rem;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 30px rgba(0, 216, 255, 0.18);
-            backdrop-filter: blur(var(--glass-blur, 16px));
-            -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
-            display: none;
-            flex-direction: column;
-            gap: 1rem;
-            transform-origin: top center;
-        }
-
-        .top-dropdown-panel.left-panel {
-            left: 1.2rem;
-        }
-
-        .top-dropdown-panel.right-panel {
-            right: 1.2rem;
-        }
-
-        .top-dropdown-panel.active {
+            top: 4.2rem;
+            bottom: 1.5rem;
+            width: 66px;
+            z-index: 90;
             display: flex;
-            animation: dropSlideDown 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            flex-direction: column;
+            align-items: center;
+            background: transparent;
+            border: none;
+            border-radius: 22px;
+            padding: 10px 4px;
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            user-select: none;
         }
 
-        .dropdown-header {
+        .side-column-left {
+            left: 1.5rem;
+        }
+
+        .side-column-right {
+            right: 1.5rem;
+        }
+
+        .side-column:hover {
+            border-color: transparent;
+            box-shadow: none;
+        }
+
+        .side-column-header {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 10px;
+            margin-bottom: 8px;
+            border-bottom: none;
+            flex-shrink: 0;
+        }
+
+        .side-column-title {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding-bottom: 0.6rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #fff;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.95);
+            cursor: pointer;
+            transition: transform 0.2s ease;
         }
 
-        .dropdown-header-actions {
+        .side-column-title:hover {
+            transform: scale(1.15);
+        }
+
+        .side-column-title span {
+            display: none !important;
+        }
+
+        .side-column-actions {
             display: flex;
-            gap: 6px;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
         }
 
-        .dropdown-action-btn {
-            background: rgba(255, 255, 255, 0.08);
+        .side-col-btn {
+            background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.12);
             color: rgba(255, 255, 255, 0.7);
-            width: 26px;
-            height: 26px;
-            border-radius: 6px;
+            width: 24px;
+            height: 24px;
+            border-radius: 7px;
             cursor: pointer;
             display: grid;
             place-items: center;
-            font-size: 0.75rem;
-            transition: all 0.2s;
+            font-size: 0.7rem;
+            transition: all 0.2s ease;
         }
 
-        .dropdown-action-btn:hover {
+        .side-col-btn:hover {
             color: #fff;
             border-color: var(--accent-blue);
-            background: var(--glass-bg);
+            background: rgba(0, 216, 255, 0.15);
         }
 
-        /* GRID LAYOUT FOR ICON-ONLY APP CARDS */
-        .dropdown-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
+        .side-col-btn.active {
+            color: #ff4757;
+            border-color: #ff4757;
+            background: rgba(255, 71, 87, 0.15);
+        }
+
+        .side-column-list {
             width: 100%;
-            padding: 8px 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 2px 0 6px;
+            flex: 1;
         }
 
-        .dropdown-item {
+        .side-column-list::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .side-column-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .side-column-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+        }
+
+        .side-column-list::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue);
+        }
+
+        /* VERTICAL APP ROW ITEM (ICON DOCK) */
+        .sidebar-app-item {
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 56px;
-            height: 56px;
-            background: var(--glass-bg, rgba(255, 255, 255, 0.08));
-            border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
-            backdrop-filter: blur(var(--glass-blur, 12px));
-            -webkit-backdrop-filter: blur(var(--glass-blur, 12px));
-            border-radius: 14px;
+            width: 46px;
+            height: 46px;
+            border-radius: 13px;
+            background: transparent;
+            border: 1px solid transparent;
             text-decoration: none;
-            color: #fff;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            color: rgba(255, 255, 255, 0.85);
+            transition: all 0.22s cubic-bezier(0.25, 0.8, 0.25, 1);
             cursor: pointer;
             user-select: none;
-            opacity: 0;
-            transform: scale(0.6) translateY(12px);
+            flex-shrink: 0;
         }
 
-        /* STAGGERED ENTRANCE ANIMATION ON CLICK / OPEN */
-        .top-dropdown-panel.active .dropdown-item {
-            animation: appIconPopIn 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-            animation-delay: calc(var(--item-idx, 0) * 0.035s + 0.04s);
-        }
-
-        @keyframes appIconPopIn {
-            0% {
-                opacity: 0;
-                transform: scale(0.5) translateY(14px);
-            }
-
-            100% {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        /* HOVER GLOW & SCALE ANIMATION */
-        .dropdown-item:hover {
-            background: var(--glass-bg-hover, rgba(255, 255, 255, 0.18));
+        .sidebar-app-item:hover {
+            background: var(--glass-bg-hover, rgba(255, 255, 255, 0.16));
             border-color: var(--accent-blue);
-            transform: translateY(-5px) scale(1.12);
-            box-shadow: 0 10px 25px rgba(0, 216, 255, 0.38), 0 0 15px rgba(0, 216, 255, 0.2);
-            z-index: 20;
+            color: #ffffff;
+            transform: scale(1.12);
+            box-shadow: 0 6px 20px rgba(0, 216, 255, 0.35);
+            z-index: 50;
         }
 
-        .dropdown-item-icon {
-            width: 32px;
-            height: 32px;
+        .sidebar-app-icon {
+            width: 30px;
+            height: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: 7px;
             pointer-events: none;
         }
 
-        .dropdown-item-icon img {
-            width: 26px;
-            height: 26px;
+        .sidebar-app-icon img {
+            width: 24px;
+            height: 24px;
             object-fit: contain;
             border-radius: 6px;
-            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.4));
-            transition: transform 0.3s ease;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+            transition: transform 0.2s ease;
         }
 
-        .dropdown-item:hover .dropdown-item-icon img {
+        .sidebar-app-item:hover .sidebar-app-icon img {
             transform: scale(1.1);
         }
 
-        .dropdown-item-icon i {
-            font-size: 1.4rem;
+        .sidebar-app-icon i {
+            font-size: 1.25rem;
         }
 
-        /* ANIMATED HOVER TOOLTIP / NAME */
-        .dropdown-item-name {
-            position: absolute;
-            top: -36px;
-            left: 50%;
-            transform: translateX(-50%) translateY(6px) scale(0.85);
+        /* HIDE STATIC APP NAME - ONLY APPEARS ON HOVER */
+        .sidebar-app-name {
+            display: none !important;
+        }
+
+        /* FLOATING TOOLTIP FOR HOVER STATE */
+        .sidebar-floating-tooltip {
+            position: fixed;
+            pointer-events: none;
             background: rgba(12, 14, 24, 0.95);
             border: 1px solid var(--accent-blue);
             color: #ffffff;
-            font-size: 0.72rem;
+            font-size: 0.8rem;
             font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            padding: 6px 13px;
+            border-radius: 9px;
             white-space: nowrap;
-            pointer-events: none;
             opacity: 0;
             visibility: hidden;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 216, 255, 0.25);
-            backdrop-filter: blur(10px);
-            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 100;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.75), 0 0 16px rgba(0, 216, 255, 0.35);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            transition: opacity 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                        transform 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 9999;
         }
 
-        .dropdown-item-name::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 5px 5px 0 5px;
-            border-style: solid;
-            border-color: var(--accent-blue) transparent transparent transparent;
-        }
-
-        .dropdown-item:hover .dropdown-item-name {
+        .sidebar-floating-tooltip.visible {
             opacity: 1;
             visibility: visible;
-            transform: translateX(-50%) translateY(0) scale(1);
         }
 
-        /* DRAGGING AND DROP TARGET VISUAL STYLES */
-        .dropdown-item.dragging {
-            opacity: 0.35 !important;
-            transform: scale(0.9) !important;
-            border: 2px dashed var(--accent-blue) !important;
-        }
-
-        .dropdown-item.drag-over {
-            border-color: #00ff88 !important;
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5) !important;
-            transform: scale(1.15) !important;
-        }
-
-        /* REMOVE BADGE ONLY VISIBLE WHEN SETTINGS BUTTON (EDIT MODE) IS PRESSED */
-        .dropdown-item-delete {
+        .sidebar-floating-tooltip.from-left::after {
+            content: '';
             position: absolute;
-            top: -6px;
-            right: -6px;
+            top: 50%;
+            right: 100%;
+            transform: translateY(-50%);
+            border-width: 5px 6px 5px 0;
+            border-style: solid;
+            border-color: transparent var(--accent-blue) transparent transparent;
+        }
+
+        .sidebar-floating-tooltip.from-right::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            transform: translateY(-50%);
+            border-width: 5px 0 5px 6px;
+            border-style: solid;
+            border-color: transparent transparent transparent var(--accent-blue);
+        }
+
+        /* DELETE BADGE ON EDIT MODE */
+        .sidebar-app-delete {
+            display: none;
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff4757;
+            color: #fff;
+            border: 1.5px solid rgba(255, 255, 255, 0.9);
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background: #ff4757;
-            color: #fff;
-            border: 1.5px solid rgba(255, 255, 255, 0.8);
-            display: flex;
             align-items: center;
             justify-content: center;
             font-size: 0.65rem;
             cursor: pointer;
-            opacity: 0;
-            transform: scale(0.4);
-            pointer-events: none;
-            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 40;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+            flex-shrink: 0;
+            transition: transform 0.2s;
+            z-index: 60;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
         }
 
-        .top-dropdown-panel.edit-mode-active .dropdown-item-delete {
-            opacity: 1;
-            transform: scale(1);
-            pointer-events: auto;
+        .side-column.edit-mode-active .sidebar-app-delete {
+            display: flex;
+            animation: shakeBadge 0.3s infinite alternate;
         }
 
-        .dropdown-item-delete:hover {
-            background: #ff6b81;
-            transform: scale(1.3) !important;
+        .sidebar-app-delete:hover {
+            transform: scale(1.25);
+            background: #ff1f34;
         }
 
-        /* JIGGLE ANIMATION WHEN EDIT MODE IS ACTIVE */
-        .top-dropdown-panel.edit-mode-active .dropdown-item {
-            opacity: 1 !important;
+        .side-column.edit-mode-active .sidebar-app-item {
             animation: appJiggle 0.35s ease-in-out infinite alternate !important;
             cursor: grab !important;
         }
 
-        .top-dropdown-panel.edit-mode-active .dropdown-item:active {
+        .side-column.edit-mode-active .sidebar-app-item:active {
             cursor: grabbing !important;
+        }
+
+        /* DRAGGING STATES */
+        .sidebar-app-item.dragging {
+            opacity: 0.35 !important;
+            transform: scale(0.95) !important;
+            border: 1px dashed var(--accent-blue) !important;
+        }
+
+        .sidebar-app-item.drag-over {
+            border-color: #00ff88 !important;
+            box-shadow: 0 0 14px rgba(0, 255, 136, 0.4) !important;
+            transform: scale(1.15) !important;
         }
 
         @keyframes appJiggle {
             0% {
-                opacity: 1;
                 transform: rotate(-1.5deg) scale(0.98);
             }
 
             100% {
-                opacity: 1;
                 transform: rotate(1.5deg) scale(1.02);
             }
+        }
+
+        @keyframes shakeBadge {
+            0% {
+                transform: scale(0.9);
+            }
+
+            100% {
+                transform: scale(1.1);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .side-column {
+                display: none;
+            }
+        }
+
+        body.layout-focus-active .side-column {
+            display: none !important;
         }
 
         .focus-container {
@@ -831,7 +876,7 @@
             justify-content: space-between;
             align-items: center;
             padding-bottom: 0.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: none;
         }
 
         .focus-title {
@@ -2823,7 +2868,7 @@
         .manage-tabs {
             display: flex;
             gap: 6px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: none;
             padding-bottom: 8px;
             margin-bottom: 0.5rem;
         }
@@ -3032,39 +3077,27 @@
         <button class="layout-editor-btn" onclick="toggleLayoutEditor(false)"><i class="fas fa-times"></i> Exit</button>
     </div>
 
-    <!-- TOP LEFT: GOOGLE APPS BUTTON -->
-    <button class="top-nav-btn top-btn-left editable-widget" data-widget-id="googleAppsBtn"
-        data-widget-label="Google Apps Button" id="googleAppsBtn" onclick="toggleGoogleAppsDropdown()"
-        title="Google Apps Menu">
-        <span>Google Apps</span>
-    </button>
-
-    <!-- GOOGLE APPS TOP DROPDOWN (ANIMATED SLIDE DOWN) -->
-    <div class="top-dropdown-panel left-panel editable-widget" data-widget-id="googleAppsDropdown"
-        data-widget-label="Google Apps Panel" id="googleAppsDropdown">
-        <div class="dropdown-header">
-            <span>Google Apps</span>
-            <div class="dropdown-header-actions">
-                <button class="dropdown-action-btn" onclick="openSidebarItemEdit('google', -1)" title="Add App"><i
+    <!-- LEFT VERTICAL COLUMN: GOOGLE APPS -->
+    <aside class="side-column side-column-left editable-widget" data-widget-id="googleAppsSidebar"
+        data-widget-label="Google Apps Sidebar" id="googleAppsSidebar">
+        <div class="side-column-header">
+            <div class="side-column-title">
+                <i class="fab fa-google" style="color:#4285F4;"></i>
+                <span>Google Apps</span>
+            </div>
+            <div class="side-column-actions">
+                <button class="side-col-btn" onclick="openSidebarItemEdit('google', -1)" title="Add App"><i
                         class="fas fa-plus"></i></button>
-                <button class="dropdown-action-btn" id="googleAppsSettingsBtn"
+                <button class="side-col-btn" id="googleAppsSettingsBtn"
                     onclick="toggleDropdownEditMode('google')" title="Toggle Remove Mode"><i
                         class="fas fa-cog"></i></button>
-                <button class="dropdown-action-btn" onclick="closeTopDropdowns()" title="Close"><i
-                        class="fas fa-times"></i></button>
             </div>
         </div>
-        <div class="dropdown-grid" id="google-apps-container"></div>
-    </div>
+        <div class="side-column-list" id="google-apps-container"></div>
+    </aside>
 
     <!-- TOP RIGHT TOOLBAR -->
     <div class="top-right-bar">
-        <!-- AI TOOLS BUTTON -->
-        <button class="top-nav-btn editable-widget" data-widget-id="aiToolsBtn" data-widget-label="AI Tools Button"
-            id="aiToolsBtn" onclick="toggleAiToolsDropdown()" title="AI Tools Menu">
-            <i class="fas fa-wand-magic-sparkles" style="color:var(--accent-blue);"></i>
-        </button>
-
         <!-- QUICK FOCUS MODE TRIGGER -->
         <button class="focus-quick-trigger editable-widget" data-widget-id="focusModeBtn"
             data-widget-label="Focus Mode Button"
@@ -3080,22 +3113,23 @@
         </button>
     </div>
 
-    <!-- AI TOOLS TOP DROPDOWN (ANIMATED SLIDE DOWN) -->
-    <div class="top-dropdown-panel right-panel editable-widget" data-widget-id="aiToolsDropdown"
-        data-widget-label="AI Tools Panel" id="aiToolsDropdown">
-        <div class="dropdown-header">
-            <span>AI Tools</span>
-            <div class="dropdown-header-actions">
-                <button class="dropdown-action-btn" onclick="openSidebarItemEdit('ai', -1)" title="Add App"><i
+    <!-- RIGHT VERTICAL COLUMN: AI APPS -->
+    <aside class="side-column side-column-right editable-widget" data-widget-id="aiToolsSidebar"
+        data-widget-label="AI Apps Sidebar" id="aiToolsSidebar">
+        <div class="side-column-header">
+            <div class="side-column-title">
+                <i class="fas fa-wand-magic-sparkles" style="color:var(--accent-blue);"></i>
+                <span>AI Apps</span>
+            </div>
+            <div class="side-column-actions">
+                <button class="side-col-btn" onclick="openSidebarItemEdit('ai', -1)" title="Add App"><i
                         class="fas fa-plus"></i></button>
-                <button class="dropdown-action-btn" id="aiToolsSettingsBtn" onclick="toggleDropdownEditMode('ai')"
+                <button class="side-col-btn" id="aiToolsSettingsBtn" onclick="toggleDropdownEditMode('ai')"
                     title="Toggle Remove Mode"><i class="fas fa-cog"></i></button>
-                <button class="dropdown-action-btn" onclick="closeTopDropdowns()" title="Close"><i
-                        class="fas fa-times"></i></button>
             </div>
         </div>
-        <div class="dropdown-grid" id="ai-tools-container"></div>
-    </div>
+        <div class="side-column-list" id="ai-tools-container"></div>
+    </aside>
 
     <!-- SETTINGS OVERLAY -->
     <div class="settings-overlay" id="settingsOverlay">
@@ -3655,21 +3689,7 @@
                 <div class="block-resize-handle"></div>
             </section>
 
-            <!-- 6. GOOGLE APPS COLUMN -->
-            <section class="layout-block" id="block-google-apps" data-block-id="google-apps">
-                <div class="block-drag-handle">Google Apps</div>
-
-                <div class="block-resize-handle"></div>
-            </section>
-
-            <!-- 7. AI TOOLS COLUMN -->
-            <section class="layout-block" id="block-ai-tools" data-block-id="ai-tools">
-                <div class="block-drag-handle">AI Tools</div>
-
-                <div class="block-resize-handle"></div>
-            </section>
-
-        </main>
+            </main>
 
         <!-- FOCUS LAYOUT CONTAINER -->
         <div class="focus-container" id="focus-container">
@@ -5759,7 +5779,7 @@
         }
 
         /* ==========================================================================
-           GOOGLE APPS & AI TOOLS TOP DROPDOWNS ENGINE
+           GOOGLE APPS & AI APPS SIDEBAR ENGINE
            ========================================================================== */
         let isGoogleEditMode = false;
         let isAiEditMode = false;
@@ -5767,14 +5787,14 @@
         function toggleDropdownEditMode(category) {
             if (category === 'google') {
                 isGoogleEditMode = !isGoogleEditMode;
-                const panel = document.getElementById('googleAppsDropdown');
+                const panel = document.getElementById('googleAppsSidebar') || document.getElementById('googleAppsDropdown');
                 const btn = document.getElementById('googleAppsSettingsBtn');
                 if (panel) panel.classList.toggle('edit-mode-active', isGoogleEditMode);
                 if (btn) btn.classList.toggle('active', isGoogleEditMode);
                 showToast(isGoogleEditMode ? 'Edit Mode ON: Click X to remove apps' : 'Edit Mode OFF');
             } else {
                 isAiEditMode = !isAiEditMode;
-                const panel = document.getElementById('aiToolsDropdown');
+                const panel = document.getElementById('aiToolsSidebar') || document.getElementById('aiToolsDropdown');
                 const btn = document.getElementById('aiToolsSettingsBtn');
                 if (panel) panel.classList.toggle('edit-mode-active', isAiEditMode);
                 if (btn) btn.classList.toggle('active', isAiEditMode);
@@ -5782,84 +5802,53 @@
             }
         }
 
-        function toggleGoogleAppsDropdown() {
-            const gMenu = document.getElementById('googleAppsDropdown');
-            const gBtn = document.getElementById('googleAppsBtn');
-            const aiMenu = document.getElementById('aiToolsDropdown');
-            const aiBtn = document.getElementById('aiToolsBtn');
+        function toggleGoogleAppsDropdown() {}
+        function toggleAiToolsDropdown() {}
+        function closeTopDropdowns() {}
 
-            if (aiMenu) aiMenu.classList.remove('active');
-            if (aiBtn) aiBtn.classList.remove('active');
+        /* FLOATING HOVER TOOLTIP ENGINE */
+        let sidebarTooltipEl = null;
 
-            if (gMenu) {
-                const isOpen = gMenu.classList.contains('active');
-                gMenu.classList.toggle('active', !isOpen);
-                if (gBtn) gBtn.classList.toggle('active', !isOpen);
-                if (isOpen) {
-                    isGoogleEditMode = false;
-                    gMenu.classList.remove('edit-mode-active');
-                    const sBtn = document.getElementById('googleAppsSettingsBtn');
-                    if (sBtn) sBtn.classList.remove('active');
-                }
+        function showSidebarTooltip(target, name, side) {
+            if (!name) return;
+            if (!sidebarTooltipEl) {
+                sidebarTooltipEl = document.createElement('div');
+                sidebarTooltipEl.id = 'sidebarFloatingTooltip';
+                sidebarTooltipEl.className = 'sidebar-floating-tooltip';
+                document.body.appendChild(sidebarTooltipEl);
+            }
+            sidebarTooltipEl.textContent = name;
+            sidebarTooltipEl.className = `sidebar-floating-tooltip visible from-${side}`;
+
+            const rect = target.getBoundingClientRect();
+            const tipRect = sidebarTooltipEl.getBoundingClientRect();
+
+            const top = rect.top + (rect.height - tipRect.height) / 2;
+            if (side === 'left') {
+                sidebarTooltipEl.style.left = (rect.right + 12) + 'px';
+                sidebarTooltipEl.style.top = top + 'px';
+            } else {
+                sidebarTooltipEl.style.left = (rect.left - tipRect.width - 12) + 'px';
+                sidebarTooltipEl.style.top = top + 'px';
             }
         }
 
-        function toggleAiToolsDropdown() {
-            const aiMenu = document.getElementById('aiToolsDropdown');
-            const aiBtn = document.getElementById('aiToolsBtn');
-            const gMenu = document.getElementById('googleAppsDropdown');
-            const gBtn = document.getElementById('googleAppsBtn');
-
-            if (gMenu) gMenu.classList.remove('active');
-            if (gBtn) gBtn.classList.remove('active');
-
-            if (aiMenu) {
-                const isOpen = aiMenu.classList.contains('active');
-                aiMenu.classList.toggle('active', !isOpen);
-                if (aiBtn) aiBtn.classList.toggle('active', !isOpen);
-                if (isOpen) {
-                    isAiEditMode = false;
-                    aiMenu.classList.remove('edit-mode-active');
-                    const sBtn = document.getElementById('aiToolsSettingsBtn');
-                    if (sBtn) sBtn.classList.remove('active');
-                }
+        function hideSidebarTooltip() {
+            if (sidebarTooltipEl) {
+                sidebarTooltipEl.classList.remove('visible');
             }
         }
 
-        function closeTopDropdowns() {
-            const gMenu = document.getElementById('googleAppsDropdown');
-            const gBtn = document.getElementById('googleAppsBtn');
-            const aiMenu = document.getElementById('aiToolsDropdown');
-            const aiBtn = document.getElementById('aiToolsBtn');
-
-            if (gMenu) {
-                gMenu.classList.remove('active', 'edit-mode-active');
-                isGoogleEditMode = false;
-                const gsBtn = document.getElementById('googleAppsSettingsBtn');
-                if (gsBtn) gsBtn.classList.remove('active');
-            }
-            if (gBtn) gBtn.classList.remove('active');
-
-            if (aiMenu) {
-                aiMenu.classList.remove('active', 'edit-mode-active');
-                isAiEditMode = false;
-                const asBtn = document.getElementById('aiToolsSettingsBtn');
-                if (asBtn) asBtn.classList.remove('active');
-            }
-            if (aiBtn) aiBtn.classList.remove('active');
+        function initSidebarHeaderTooltips() {
+            document.querySelectorAll('.side-column-title').forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    const isLeft = !!el.closest('.side-column-left');
+                    const title = isLeft ? 'Google Apps' : 'AI Apps';
+                    showSidebarTooltip(el, title, isLeft ? 'left' : 'right');
+                });
+                el.addEventListener('mouseleave', hideSidebarTooltip);
+            });
         }
-
-        // Close top dropdowns when clicking outside or pressing ESC
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#googleAppsDropdown') && !e.target.closest('#googleAppsBtn') &&
-                !e.target.closest('#aiToolsDropdown') && !e.target.closest('#aiToolsBtn')) {
-                closeTopDropdowns();
-            }
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeTopDropdowns();
-        });
 
         const OFFICIAL_APP_LOGOS = {
             'gmail': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48"><path fill="%234285F4" d="M45,16.2v21.3c0,2.5-2,4.5-4.5,4.5h-5.5V26.6L45,16.2z"/><path fill="%2334A853" d="M3,16.2l10,10.4V42H7.5C5,42,3,40,3,37.5V16.2z"/><path fill="%23EA4335" d="M35,12L24,20L13,12v14.6l11,8.4l11-8.4V12z"/><path fill="%23FBBC04" d="M35,6h5.5c2.5,0,4.5,2,4.5,4.5v5.7L35,23.6V6z"/><path fill="%23C5221F" d="M3,16.2V10.5C3,8,5,6,7.5,6H13v17.6L3,16.2z"/></svg>',
@@ -5977,6 +5966,8 @@
             // Persist the upgraded list back to local storage to migrate values permanently
             saveSidebarList('google', googleApps);
             saveSidebarList('ai', aiTools);
+            initSidebarHeaderTooltips();
+
         }
 
         let appDragCategory = null;
@@ -5997,12 +5988,13 @@
 
                     const a = document.createElement('a');
                     a.href = href;
-                    a.className = 'dropdown-item';
+                    a.className = 'sidebar-app-item dropdown-item';
                     a.target = '_blank';
                     a.rel = 'noopener noreferrer';
                     a.draggable = true;
                     a.dataset.idx = idx;
                     a.dataset.category = category;
+                    a.dataset.name = item.name;
                     a.style.setProperty('--item-idx', visibleCount++);
 
                     let iconSrc = getAppLogoSvg(item.name, item.url, item.icon);
@@ -6019,16 +6011,23 @@
                     }
 
                     a.innerHTML = `
-                        <div class="dropdown-item-icon">${iconHtml}</div>
-                        <span class="dropdown-item-name">${escH(item.name)}</span>
-                        <button class="dropdown-item-delete" onclick="event.preventDefault(); event.stopPropagation(); quickDeleteApp('${category}', ${idx});" title="Remove ${escH(item.name)}">
+                        <div class="sidebar-app-icon dropdown-item-icon">${iconHtml}</div>
+                        <span class="sidebar-app-name dropdown-item-name">${escH(item.name)}</span>
+                        <button class="sidebar-app-delete dropdown-item-delete" onclick="event.preventDefault(); event.stopPropagation(); quickDeleteApp('${category}', ${idx});" title="Remove ${escH(item.name)}">
                             <i class="fas fa-times"></i>
                         </button>
                     `;
 
+                    // Hover tooltip: App name appears ONLY on hovering
+                    a.addEventListener('mouseenter', () => {
+                        const isLeft = !!a.closest('.side-column-left');
+                        showSidebarTooltip(a, item.name, isLeft ? 'left' : 'right');
+                    });
+                    a.addEventListener('mouseleave', hideSidebarTooltip);
+
                     // Click behavior: if in edit mode, prevent link navigation
                     a.addEventListener('click', (e) => {
-                        const panel = a.closest('.top-dropdown-panel');
+                        const panel = a.closest('.side-column') || a.closest('.top-dropdown-panel');
                         if (panel && panel.classList.contains('edit-mode-active')) {
                             e.preventDefault();
                         }
@@ -6036,6 +6035,7 @@
 
                     // Drag and drop events for reordering
                     a.addEventListener('dragstart', (e) => {
+                        hideSidebarTooltip();
                         appDragCategory = category;
                         appDraggedIdx = idx;
                         a.classList.add('dragging');
@@ -6045,7 +6045,7 @@
 
                     a.addEventListener('dragend', () => {
                         a.classList.remove('dragging');
-                        document.querySelectorAll('.dropdown-item').forEach(el => el.classList.remove('drag-over'));
+                        document.querySelectorAll('.sidebar-app-item, .dropdown-item').forEach(el => el.classList.remove('drag-over'));
                         if (appDragCategory) {
                             saveSidebarList(appDragCategory, getSidebarList(appDragCategory));
                             if (appDragCategory === 'google') renderGoogleApps();
@@ -6058,7 +6058,7 @@
                     a.addEventListener('dragover', (e) => {
                         e.preventDefault();
                         if (appDragCategory === category && appDraggedIdx !== null) {
-                            const draggingItem = container.querySelector('.dropdown-item.dragging');
+                            const draggingItem = container.querySelector('.sidebar-app-item.dragging, .dropdown-item.dragging');
                             if (draggingItem && draggingItem !== a) {
                                 const list = getSidebarList(category);
                                 const children = Array.from(container.children);
